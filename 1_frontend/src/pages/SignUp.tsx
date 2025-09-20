@@ -1,24 +1,41 @@
-import { supabase } from "../app/supabaseClient";
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import styled from "styled-components";
+import { supabase } from "../app/supabaseClient";
+import SignupForm from "../components/forms/SignupForm";
+import { Link, useNavigate } from "react-router-dom";
+import LoaderPage from "../components/common/loaders/LoaderPage";
+import { useToast } from "../app/toast";
+import { useI18n } from "../app/i18n";
 
-export default function SignUp() {
-  const [email,setEmail]=useState(""); const [pw,setPw]=useState("");
+export default function SignUp(){
+  const [loading,setLoading] = useState(false);
   const nav = useNavigate();
-  const submit = async () => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password: pw });
-    if (error) return alert(error.message);
-    nav("/app");
+  const { notify } = useToast();
+  const { t } = useI18n();
+
+  const submit = async ({email, password, fullName}:{email:string;password:string;fullName:string})=>{
+    setLoading(true);
+    const { error, data } = await supabase.auth.signUp({ email, password, options:{ data:{ fullName } } });
+    setLoading(false);
+    if (error) { notify({ title:t("error"), content:error.message, tone:"error" }); return; }
+    // Supabase yêu cầu verify email
+    notify({ title: t("signupVerify"), tone:"success" });
+    if (data.user) nav("/signin");
   };
+
   return (
-    <div className="h-screen flex items-center justify-center p-4">
-      <div className="w-full max-w-sm space-y-3">
-        <h1 className="text-2xl font-bold">Đăng ký</h1>
-        <input className="border p-2 w-full" placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)} />
-        <input className="border p-2 w-full" placeholder="Mật khẩu" type="password" value={pw} onChange={e=>setPw(e.target.value)} />
-        <button className="bg-black text-white w-full py-2" onClick={submit}>Đăng nhập</button>
-        <p className="text-sm">Chưa có tài khoản? <Link to="/signup" className="underline">Đăng ký</Link></p>
-      </div>
-    </div>
+    <Wrap>
+      {loading ? <LoaderPage /> : (
+        <div className="card">
+          <SignupForm onSubmit={submit} loading={loading}/>
+          <div className="hint">{t("haveAccount")} <Link to="/signin">{t("signin")}</Link></div>
+        </div>
+      )}
+    </Wrap>
   );
 }
+const Wrap = styled.div`
+  min-height:100vh; display:flex; align-items:center; justify-content:center; padding: 24px;
+  .card{ display:flex; flex-direction:column; align-items:center; gap:12px; }
+  .hint{ color:#bdbdbd; font-size:.95rem; }
+`;

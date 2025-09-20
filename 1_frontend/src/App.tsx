@@ -1,16 +1,18 @@
-import { Outlet } from "react-router-dom";
-import Sidebar from "./components/Sidebar";
-
+import { Routes, Route, Navigate } from "react-router-dom";
+import SignIn from "./pages/SignIn";
+import SignUp from "./pages/SignUp";
+import ChatPage from "./pages/ChatPage";
+import Forgot from "./pages/ForgotPassword";
 
 export default function App() {
   return (
-    <div className="h-screen grid md:grid-cols-[280px_1fr] grid-cols-1">
-      <aside className="hidden md:block border-r">
-        <Sidebar />
-      </aside>
-      <main className="flex flex-col">
-        <Outlet />
-      </main>
-    </div>
+    <Routes>
+      <Route path="/" element={<Navigate to="/signin" />} />
+      <Route path="/signin" element={<SignIn />} />
+      <Route path="/signup" element={<SignUp />} />
+      <Route path="/forgot" element={<Forgot />} />
+      <Route path="/app" element={<ChatPage />} />
+      <Route path="*" element={<Navigate to="/signin" />} />
+    </Routes>
   );
 }
