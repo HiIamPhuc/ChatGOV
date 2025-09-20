@@ -1,0 +1,13 @@
+import { createGlobalStyle } from "styled-components";
+
+export const GlobalStyle = createGlobalStyle`
+  * { box-sizing: border-box; }
+  html, body, #root { height: 100%; }
+  body {
+    margin: 0;
+    background: ${({ theme }) => theme.colors.bg};
+    color: ${({ theme }) => theme.colors.primary};
+    font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  }
+  a { color: ${({ theme }) => theme.colors.primary}; text-decoration: none; }
+`;
