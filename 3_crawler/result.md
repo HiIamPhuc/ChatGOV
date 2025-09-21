@@ -102,9 +102,9 @@ kinh doanh có điều kiện ](https://dichvucong.bocongan.gov.vn/bocongan/both
 ### Thống kê số lượng hồ sơ dịch vụ công trực tuyến Bộ Công an
 #### Năm 2025
 [ ](https://dichvucong.bocongan.gov.vn/bocongan/thongke)
-Tổng hồ sơ nộp: 5149282
-Giải quyết: 5843710 hồ sơ
-Đúng hạn: 5441490 hồ sơ
+Tổng hồ sơ nộp: 5155104
+Giải quyết: 5847126 hồ sơ
+Đúng hạn: 5445477 hồ sơ
 #### Tình hình xử lý hồ sơ theo tháng
 Tháng 9/2025
 97,56% Đúng hạn

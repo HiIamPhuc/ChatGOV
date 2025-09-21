@@ -1,19 +1,28 @@
 import asyncio
-from crawl4ai import AsyncWebCrawler
+from crawl4ai import AsyncWebCrawler, CrawlerRunConfig, CacheMode, BrowserConfig
+from crawl4ai.content_filter_strategy import PruningContentFilter
+from crawl4ai.markdown_generation_strategy import DefaultMarkdownGenerator
 
 
 async def main():
-    # Create an instance of AsyncWebCrawler
-    async with AsyncWebCrawler() as crawler:
-        # Run the crawler on a URL
-        result = await crawler.arun(url="https://dichvucong.bocongan.gov.vn/?home=1")
+    browser_config = BrowserConfig(headless=True)
+    md_generator = DefaultMarkdownGenerator(
+        content_filter=PruningContentFilter(threshold=0.4, threshold_type="fixed")
+    )
 
-        # Print the extracted content
+    config = CrawlerRunConfig(
+        cache_mode=CacheMode.BYPASS, markdown_generator=md_generator
+    )
+
+    async with AsyncWebCrawler(config=browser_config) as crawler:
+        result = await crawler.arun(
+            url="https://dichvucong.bocongan.gov.vn/?home=1", config=config
+        )
+
         print(result.markdown)
 
-        with open("resutl.md", "w") as file:
+        with open("result.md", "w") as file:
             file.write(result.markdown)
 
 
-# Run the async main function
 asyncio.run(main())
