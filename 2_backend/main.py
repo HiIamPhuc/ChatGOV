@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from .routers import chat
-from .config import llm, embeddings  # Ensure initialized; embeddings not used now, but keep for potential future
+# from .config import llm, embeddings  # Ensure initialized; embeddings not used now, but keep for potential future
 
 app = FastAPI()
 
@@ -17,4 +17,4 @@ app.router.lifespan_context = lifespan
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

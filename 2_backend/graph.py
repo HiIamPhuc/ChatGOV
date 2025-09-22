@@ -2,7 +2,7 @@ from typing import Annotated, TypedDict, List
 from langgraph.graph import StateGraph, END
 from langgraph.prebuilt import tools_condition
 from langchain_core.messages import BaseMessage, SystemMessage
-from .config import llm, WEBSITE_NAME
+from .config import WEBSITE_NAME
 from .tools import search_services
 
 class SessionState(TypedDict):

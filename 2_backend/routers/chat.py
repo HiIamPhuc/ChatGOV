@@ -8,7 +8,7 @@ from ..models import Session, User
 router = APIRouter()
 
 class StartSessionRequest(BaseModel):
-    user_id: str
+    user_id: str  # Should be the auth.users.id (UUID)
 
 class ChatRequest(BaseModel):
     session_id: str
@@ -17,8 +17,9 @@ class ChatRequest(BaseModel):
 @router.post("/start_session")
 async def start_session(request: StartSessionRequest = Body(...)):
     user = get_user(request.user_id)
+    print(user)
     if not user:
-        user = User(user_id=request.user_id)
+        user = User(id=request.user_id)  # Create a minimal user object if not found
     
     session_id = str(uuid.uuid4())
     
@@ -30,7 +31,7 @@ async def start_session(request: StartSessionRequest = Body(...)):
     save_session(session)
     
     user.sessions.append(session_id)
-    save_user(user)
+    save_user(user)  # No-op since save_user is a pass
     
     return {"session_id": session_id}
 
