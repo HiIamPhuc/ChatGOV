@@ -2,11 +2,14 @@ from typing import Annotated, TypedDict, List
 from langgraph.graph import StateGraph, END
 from langgraph.prebuilt import tools_condition
 from langchain_core.messages import BaseMessage, SystemMessage
-from .config import WEBSITE_NAME
+from langchain.chat_models import init_chat_model
+from .config import WEBSITE_NAME, GEMINI_MODEL
 from .tools import search_services
 
 class SessionState(TypedDict):
     messages: Annotated[List[BaseMessage], "The chat messages in this session"]
+
+llm = llm = init_chat_model(GEMINI_MODEL, model_provider="google_genai")
 
 def query_or_respond(state: SessionState):
     llm_with_tools = llm.bind_tools([search_services])

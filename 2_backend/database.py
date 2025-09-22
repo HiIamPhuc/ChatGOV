@@ -1,10 +1,11 @@
 from typing import List, Optional
 from supabase import create_client, Client
-from .config import SUPABASE_URL, SUPABASE_KEY
+from .config import SUPABASE_URL, SUPABASE_KEY, SUPABASE_SERVICE_ROLE_KEY
 from .models import User, Session, Service
 from langchain_core.messages import message_to_dict, messages_from_dict, BaseMessage
 
-client: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+# client: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+client: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
 def get_user(user_id: str) -> Optional[User]:
     # Query auth.users table directly
