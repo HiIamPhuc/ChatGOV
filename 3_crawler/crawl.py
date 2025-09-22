@@ -1,28 +1,46 @@
 import asyncio
+import re
 from crawl4ai import AsyncWebCrawler, CrawlerRunConfig, CacheMode, BrowserConfig
-from crawl4ai.content_filter_strategy import PruningContentFilter
 from crawl4ai.markdown_generation_strategy import DefaultMarkdownGenerator
 
 
 async def main():
     browser_config = BrowserConfig(headless=True)
-    md_generator = DefaultMarkdownGenerator(
-        content_filter=PruningContentFilter(threshold=0.4, threshold_type="fixed")
+    config = CrawlerRunConfig(
+        cache_mode=CacheMode.BYPASS,
+        markdown_generator=DefaultMarkdownGenerator(),
+        verbose=True,
     )
 
-    config = CrawlerRunConfig(
-        cache_mode=CacheMode.BYPASS, markdown_generator=md_generator
-    )
+    base_url = "https://dichvucong.bocongan.gov.vn/bocongan/bothutuc/listThuTuc?per_page=50&page="
+    all_links = set()
 
     async with AsyncWebCrawler(config=browser_config) as crawler:
-        result = await crawler.arun(
-            url="https://dichvucong.bocongan.gov.vn/?home=1", config=config
-        )
+        # Giả sử có khoảng 200 thủ tục => với per_page=50 => ~4 trang
+        for page in range(1, 10):  # tăng lên nếu cần, hoặc dừng khi không thấy link mới
+            url = base_url + str(page)
+            result = await crawler.arun(url=url, config=config)
 
-        print(result.markdown)
+            if not result.success:
+                print(f"❌ Fail page {page}")
+                break
 
-        with open("result.md", "w") as file:
-            file.write(result.markdown)
+            # Regex lấy các link matt
+            link_pattern = r"https://dichvucong\.bocongan\.gov\.vn/bocongan/bothutuc/tthc\?matt=\d+"
+            matches = re.findall(link_pattern, result.markdown)
+            if not matches:
+                print(f"⛔ Page {page} không có thêm link, dừng lại")
+                break
+
+            all_links.update(matches)
+            print(f"✅ Page {page}: tìm thấy {len(matches)} link")
+
+    print(f"\n🔗 Tổng số link tìm thấy: {len(all_links)}")
+    with open("all_filtered_links.csv", "w", encoding="utf-8") as f:
+        f.write("link\n")
+        for url in all_links:
+            f.write(url + "\n")
 
 
-asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(main())
