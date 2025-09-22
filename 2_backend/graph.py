@@ -69,7 +69,7 @@ def compile_graph():
     graph_builder.add_conditional_edges(
         "query_or_respond",
         tools_condition,
-        {"END": END, "tools": "tools"},
+        {"__end__": END, "tools": "tools"},
     )
     graph_builder.add_edge("tools", "generate")
     graph_builder.add_edge("generate", END)

@@ -26,7 +26,7 @@ def get_session(session_id: str) -> Optional[Session]:
 
 def save_session(session: Session):
     data = session.dict()
-    client.table('sessions').upsert(data).execute()
+    client.table('sessions').upsert(data, on_conflict='session_id').execute()
 
 # Helpers for chat history serialization
 def serialize_chat_history(history: List[BaseMessage]) -> List[dict]:
@@ -40,3 +40,5 @@ def get_services_with_similarity(query: str, threshold: float = 0.3, limit: int 
     select_query = f"*, similarity(title, '{query}') as sim"
     response = client.table('services').select(select_query).gt('sim', threshold).order('sim', desc=True).limit(limit).execute()
     return [Service(**item) for item in response.data]
+
+print(get_services_with_similarity('Dang ky ho chieu'))
