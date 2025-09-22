@@ -1,114 +1,227 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import styled from "styled-components";
-import Sidebar from "@/components/layout/Sidebar";
 import PromptInput from "@/components/common/chat/PromptInput";
 import ChatMessage from "@/components/common/chat/ChatMessage";
 import LoaderTyping from "@/components/common/loaders/LoaderTyping";
-import { supabase } from "@/app/supabaseClient";
 import { useI18n } from "@/app/i18n";
 
-type Msg = { id:string; role:"user"|"assistant"; content:string; };
+type Msg = { id: string; role: "user" | "assistant"; content: string };
 
-export default function ChatPage(){
+const SCROLL_DURATION_MS = 900; // 👈 chỉnh tốc độ chậm/nhanh ở đây
+const easeInOut = (t: number) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
+
+export default function ChatPage() {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [typing, setTyping] = useState(false);
+
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const innerRef = useRef<HTMLDivElement | null>(null);
+
+  const [autoFollow, setAutoFollow] = useState(true);
+  const [unread, setUnread] = useState(0);
+
+  const animIdRef = useRef<number | null>(null);
+  const prevTopRef = useRef<number>(0); // để nhận biết kéo lên
+
   const { t } = useI18n();
+  const isEmpty = messages.length === 0;
 
-  useEffect(()=>{
-    supabase.auth.getUser().then(({data})=>{
-      if(!data.user) window.location.href = "/signin";
+  const cancelAnim = () => {
+    if (animIdRef.current) cancelAnimationFrame(animIdRef.current);
+    animIdRef.current = null;
+  };
+
+  const animateToBottom = (duration = SCROLL_DURATION_MS) => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    cancelAnim();
+    const startTop = el.scrollTop;
+    const startTime = performance.now();
+
+    const step = (now: number) => {
+      // mục tiêu luôn cập nhật để theo kịp nội dung đang nở ra
+      const target = el.scrollHeight - el.clientHeight;
+      const t = Math.min(1, (now - startTime) / duration);
+      el.scrollTop = startTop + (target - startTop) * easeInOut(t);
+
+      if (t < 1) {
+        animIdRef.current = requestAnimationFrame(step);
+      } else {
+        animIdRef.current = null;
+      }
+    };
+
+    // double-rAF để chắc chắn layout xong
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      // cập nhật prevTopRef để onScroll không hiểu nhầm là người dùng kéo lên
+      prevTopRef.current = el.scrollTop;
+      step(performance.now());
+    }));
+
+    setUnread(0);
+  };
+
+  const scrollToBottom = (instant = false) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    if (instant) {
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => {
+          cancelAnim();
+          el.scrollTop = el.scrollHeight;
+          prevTopRef.current = el.scrollTop;
+        })
+      );
+    } else {
+      animateToBottom();
+    }
+    setAutoFollow(true);
+    setUnread(0);
+  };
+
+  useEffect(() => { scrollToBottom(true); }, []);
+
+  useLayoutEffect(() => {
+    if (autoFollow) scrollToBottom(false);
+    else if (messages.length) setUnread((n) => n + 1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages, typing]);
+
+  // nội dung nở ra (markdown, ảnh…) thì bám đuôi
+  useEffect(() => {
+    if (!innerRef.current) return;
+    const ro = new ResizeObserver(() => {
+      if (autoFollow) scrollToBottom(false);
     });
-  },[]);
+    ro.observe(innerRef.current);
+    return () => ro.disconnect();
+  }, [autoFollow]);
 
-  const onSend = async ({prompt, rootUrl}:{prompt:string; rootUrl?:string})=>{
-    setMessages(m => [...m, {id:crypto.randomUUID(), role:"user", content:prompt}]);
+  const onScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    const threshold = 60;
+    const deltaToBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    const atBottom = deltaToBottom < threshold;
+
+    // phát hiện người dùng kéo lên => huỷ animation & tắt autofollow
+    const prevTop = prevTopRef.current;
+    const nowTop = el.scrollTop;
+    const userScrolledUp = nowTop < prevTop - 1; // -1 để tránh nhiễu
+    prevTopRef.current = nowTop;
+
+    if (userScrolledUp) {
+      cancelAnim();
+      setAutoFollow(false);
+    } else if (atBottom) {
+      setAutoFollow(true);
+      setUnread(0);
+    }
+  };
+
+  const jumpToBottom = () => {
+    scrollToBottom(false);
+  };
+
+  const onSend = async (p: { prompt: string; rootUrl?: string }) => {
     setTyping(true);
-    await new Promise(r=>setTimeout(r, 700)); // stub: gọi bot thật ở đây
-    const reply = `*(demo)* ${t("you_asked") ?? "You asked:"} **${prompt}**${rootUrl ? `\n\nSite: ${rootUrl}` : ""}`;
-    setMessages(m => [...m, {id:crypto.randomUUID(), role:"assistant", content:reply}]);
+    const demo: Msg[] = [
+      { id: crypto.randomUUID(), role: "user", content: p.prompt },
+      {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        content: `**Hướng dẫn nộp hồ sơ trực tuyến** cho dịch vụ: *Cấp lại CCCD*.
+
+<!--steps:["Truy cập Cổng Dịch vụ công quốc gia.","Đăng nhập/đăng ký tài khoản công dân.","Tìm dịch vụ 'Cấp lại Căn cước công dân'.","Điền mẫu đơn, tải lên giấy tờ yêu cầu.","Xác nhận, ký số (nếu có) và nộp hồ sơ.","Theo dõi trạng thái trong mục Hồ sơ của tôi."]-->
+
+👉 Liên kết: https://dichvucong.gov.vn/p/home/dvc-trang-chu.html
+
+- **Phí xử lý:** 50.000đ (tham khảo)
+- **Thời gian dự kiến:** 7–10 ngày làm việc
+
+> Lưu ý: Thông tin chỉ mang tính demo. Khi tích hợp backend, nội dung sẽ do LLM trả về.`,
+      },
+    ];
+    setMessages((prev) => prev.concat(demo));
     setTyping(false);
   };
 
-  const isEmpty = messages.length === 0 && !typing;
-
   return (
-    <Layout>
-      <aside className="sidebar"><Sidebar/></aside>
-
-      <section className="main">
-        <header className="topbar">{t("appTitle")}</header>
-
-        {isEmpty ? (
-          // ======= HOME MODE (giống ảnh 2) =======
-          <div className="home">
-            <h1 className="hero">{t("heroTitle") ?? "What are you working on?"}</h1>
-            <div className="heroComposer">
-              <PromptInput onSend={onSend} maxWidth={720} compact />
+    <Main>
+      {isEmpty ? (
+        <div className="home">
+          <h1 className="hero">{t("heroTitle") ?? "Bạn đang cần hỗ trợ gì?"}</h1>
+          <div className="heroComposer">
+            <PromptInput onSend={onSend} maxWidth={720} compact />
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="scroll" ref={scrollRef} onScroll={onScroll}>
+            <div className="inner" ref={innerRef}>
+              {messages.map((m) => <ChatMessage key={m.id} msg={m} />)}
+              {typing && <div className="typing"><LoaderTyping/></div>}
             </div>
           </div>
-        ) : (
-          // ======= CHAT MODE (giống ảnh 3) =======
-          <>
-            <div className="scroll">
-              <div className="inner">
-                {messages.map(m => <ChatMessage key={m.id} msg={m} />)}
-                {typing && <div className="typing"><LoaderTyping/></div>}
-              </div>
-            </div>
-            <footer className="input">
-              <PromptInput onSend={onSend} maxWidth={820} />
-            </footer>
-          </>
-        )}
-      </section>
-    </Layout>
+
+          {!autoFollow && (
+            <button className="jump" onClick={jumpToBottom}
+              aria-label={t("jumpToLatest") || "Jump to latest"}
+              title={t("jumpToLatest") || "Jump to latest"}>
+              <svg viewBox="0 0 24 24" width="18" height="18">
+                <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" strokeWidth="2"
+                      strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              {unread > 0 && <span className="badge">{unread}</span>}
+            </button>
+          )}
+
+          <footer className="input">
+            <PromptInput onSend={onSend} maxWidth={820} />
+            <p className="disclaimer">
+              {t("chatDisclaimer") || "ChatGPT can make mistakes. Check important info."}
+            </p>
+          </footer>
+        </>
+      )}
+    </Main>
   );
 }
 
-const Layout = styled.div`
-  height:100vh; display:grid; grid-template-columns: 280px 1fr; background:#0b0f14;
+const Main = styled.div`
+  position: relative; display:flex; flex-direction:column; height:100%;
 
-  @media (max-width: 900px){ grid-template-columns: 1fr; .sidebar{ display:none; } }
+  .home{ display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; flex:1; }
+  .hero{ font-size:clamp(24px, 2.6vw, 36px); margin:0; text-align:center; }
+  .heroComposer{ width:100%; display:flex; justify-content:center; }
 
-  .topbar{
-    height:56px; display:flex; align-items:center; padding:0 16px;
-    border-bottom:1px solid #1b2430;
-    background: linear-gradient(180deg, #0f141b, #0b0f14);
-    color:#e6edf3; font-weight:600; letter-spacing:.4px;
+  .scroll{ flex:1; overflow:auto; padding:18px; padding-bottom:120px; }
+  .inner{ max-width:920px; margin:0 auto; }
+  .typing{ padding:10px 0; }
+
+  .input{ position:sticky; bottom:0; display:flex; flex-direction:column; align-items:center; gap:8px;
+    padding:0 18px 10px; background:transparent; border-top:1px solid transparent; }
+  .disclaimer{ margin:2px 0 6px; font-size:12px; color:${({theme})=>theme.colors.secondary}; text-align:center; }
+
+  .jump{
+    position:absolute; left:50%; transform:translateX(-50%); bottom:92px;
+    width:40px; height:40px; border-radius:999px; border:1px solid ${({theme})=>theme.colors.border};
+    display:grid; place-items:center; color:#fff;
+    background:linear-gradient(90deg, ${({theme})=>theme.colors.accent}, ${({theme})=>theme.colors.accent2});
+    box-shadow:0 10px 24px rgba(206,122,88,.25); cursor:pointer; transition:filter .15s, transform .15s; z-index:3;
+  }
+  .jump:hover{ filter:brightness(.96); }
+  .jump:active{ transform:translateX(-50%) scale(.98); }
+  .jump .badge{
+    position:absolute; top:-6px; right:-6px; min-width:18px; height:18px; padding:0 5px;
+    border-radius:999px; background:#fff; color:${({theme})=>theme.colors.accent2};
+    font-size:11px; font-weight:800; border:1px solid ${({theme})=>theme.colors.border};
+    display:inline-flex; align-items:center; justify-content:center;
   }
 
-  .main{ display:flex; flex-direction:column; }
-
-  /* ===== HOME MODE ===== */
-  .home{
-    flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
-    padding: 24px 18px;
-  }
-  .hero{
-    color:#e6edf3; text-align:center; font-weight:650; letter-spacing:.2px;
-    font-size: clamp(22px, 3.6vw, 34px);
-    margin: 0 0 22px;
-  }
-  .heroComposer{ width:100%; }
-
-  /* ===== CHAT MODE ===== */
-  .scroll{
-    flex:1; overflow:auto;
-    background: radial-gradient(1200px 600px at 50% -200px, #0f141b 0%, #0b0f14 60%, #0b0f14 100%);
-  }
-  .inner{ padding: 18px; display:flex; flex-direction:column; gap:10px; }
-  .typing{ display:flex; justify-content:center; margin: 8px 0; }
-
-  .input{
-    position:sticky; bottom:0; padding:12px 18px; backdrop-filter: blur(6px);
-    background: rgba(11,15,20,.65); border-top:1px solid #10161f;
-  }
-
-  /* scrollbar tinh tế cho vùng chat */
-  .scroll::-webkit-scrollbar { width: 12px; }
-  .scroll::-webkit-scrollbar-track { background: transparent; }
-  .scroll::-webkit-scrollbar-thumb {
-    background: #1e2732; border-radius: 10px; border: 3px solid transparent; background-clip: content-box;
-  }
-  .scroll{ scrollbar-color:#1e2732 transparent; scrollbar-width: thin; }
+  .scroll::-webkit-scrollbar{ width:12px; }
+  .scroll::-webkit-scrollbar-thumb{ background:#d0d0d0; border-radius:10px; border:3px solid transparent; background-clip:content-box; }
+  .scroll{ scrollbar-width:thin; scrollbar-color:#d0d0d0 transparent; }
 `;

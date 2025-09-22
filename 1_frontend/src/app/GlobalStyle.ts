@@ -9,5 +9,7 @@ export const GlobalStyle = createGlobalStyle`
     color: ${({ theme }) => theme.colors.primary};
     font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
   }
-  a { color: ${({ theme }) => theme.colors.primary}; text-decoration: none; }
+  a { color: ${({ theme }) => theme.colors.accent}; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  ::selection { background: ${({ theme }) => theme.colors.accent2}; color: #fff; }
 `;
