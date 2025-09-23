@@ -3,16 +3,17 @@ from langgraph.prebuilt import tools_condition, ToolNode
 from langchain_core.messages import SystemMessage
 from langchain.chat_models import init_chat_model
 from .config import WEBSITE_NAME, GEMINI_MODEL
-from .tools import search_services
+from .tools import search_services_by_similarity
+
 
 llm = init_chat_model(GEMINI_MODEL, model_provider="google_genai")
 
 def query_or_respond(state: MessagesState):
-    llm_with_tools = llm.bind_tools([search_services])
+    llm_with_tools = llm.bind_tools([search_services_by_similarity])
     response = llm_with_tools.invoke(state["messages"])
     return {"messages": [response]}
 
-tools_node = ToolNode([search_services])
+tools_node = ToolNode([search_services_by_similarity])
 
 def generate(state: MessagesState):
     recent_tool_messages = []
@@ -45,6 +46,7 @@ def generate(state: MessagesState):
 
     response = llm.invoke(prompt)
     return {"messages": [response]}
+
 
 def compile_graph():
     graph_builder = StateGraph(MessagesState)

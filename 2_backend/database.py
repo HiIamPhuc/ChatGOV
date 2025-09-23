@@ -11,39 +11,57 @@ elif MODE == "prod":
 else:
     raise ValueError("Invalid MODE. Choose 'dev' or 'prod'.")
 
+
 def get_user(user_id: str) -> Optional[User]:
     # Query auth.users table directly
     response = client.auth.admin.get_user_by_id(user_id)
     if response.user:
-        return User(id=response.user.id, email=response.user.email, phone=response.user.phone)
+        return User(
+            id=response.user.id, email=response.user.email, phone=response.user.phone
+        )
     return None
+
 
 def save_user(user: User):
     # No need to save to custom table; auth.users is managed by Supabase Auth
     pass
 
+
 def get_session(session_id: str) -> Optional[Session]:
-    response = client.table('sessions').select('*').eq('session_id', session_id).execute()
+    response = (
+        client.table("sessions").select("*").eq("session_id", session_id).execute()
+    )
     if response.data:
         return Session(**response.data[0])
     return None
 
+
 def save_session(session: Session):
     data = session.dict()
-    client.table('sessions').upsert(data, on_conflict='session_id').execute()
+    client.table("sessions").upsert(data, on_conflict="session_id").execute()
+
 
 # Helpers for chat history serialization
 def serialize_chat_history(history: List[BaseMessage]) -> List[dict]:
     return [message_to_dict(msg) for msg in history]
 
+
 def deserialize_chat_history(serialized: List[dict]) -> List[BaseMessage]:
     # return [messages_from_dict(d) for d in serialized]
     return messages_from_dict(serialized)
 
-# For services (fuzzy search handled in tools)
-def get_services_with_similarity(query: str, threshold: float = 0.3, limit: int = 5) -> List[Service]:
-    select_query = f"*, similarity(title, '{query}') as sim"
-    response = client.table('services').select(select_query).gt('sim', threshold).order('sim', desc=True).limit(limit).execute()
-    return [Service(**item) for item in response.data]
 
-# print(get_services_with_similarity('Dang ky ho chieu'))
+# For services (fuzzy search handled in tools)
+def get_services_with_similarity(
+    query: str, threshold: float = 0.3, limit: int = 5
+) -> List[Service]:
+    response = client.rpc(
+        "search_services_by_similarity",
+        {
+            "search_query": query,
+            "similarity_threshold": threshold,
+            "result_limit": limit,
+        },
+    ).execute()
+
+    return [Service(**item) for item in response.data]
