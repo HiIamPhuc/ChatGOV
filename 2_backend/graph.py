@@ -9,8 +9,13 @@ from .tools import search_services_by_similarity
 llm = init_chat_model(GEMINI_MODEL, model_provider="google_genai")
 
 def query_or_respond(state: MessagesState):
+    from .prompts import create_system_message
+    
+    # Add system message at the start of conversation
+    messages = [SystemMessage(content=create_system_message())] + state["messages"]
+    
     llm_with_tools = llm.bind_tools([search_services_by_similarity])
-    response = llm_with_tools.invoke(state["messages"])
+    response = llm_with_tools.invoke(messages)
     return {"messages": [response]}
 
 tools_node = ToolNode([search_services_by_similarity])
