@@ -1,10 +1,10 @@
 from langchain_core.tools import tool
-from database import get_services_with_similarity
+from .database import get_services_with_similarity
 
 
 @tool
 def search_services_by_similarity(
-    query: str, threshold: float = 0.1, limit: int = 5
+    query: str, threshold: float = 0.1, limit: int = 1
 ) -> str:
     """
     Search for services using fuzzy matching on titles.
@@ -35,7 +35,7 @@ def search_services_by_similarity(
                 f"**Mã thủ tục:** {service.service_id}\n\n"
                 f"**Link:** {service.url}\n\n"
                 f"**Các nội dung:**\n"
-                f"```\n{str(service.content)[:200]}...\n```"
+                f"```\n{str(service.content)}...\n```"
             )
 
         return f"# Found {len(results)} Similar Services\n\n" + "\n\n---\n\n".join(
