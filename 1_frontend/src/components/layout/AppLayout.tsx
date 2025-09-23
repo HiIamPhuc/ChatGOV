@@ -4,33 +4,38 @@ import Sidebar from "@/components/layout/Sidebar";
 import { Outlet, useLocation } from "react-router-dom";
 import { useI18n } from "@/app/i18n";
 
-const HEADER_H = 60;
-
 export default function AppLayout() {
   const { t } = useI18n();
   const { pathname } = useLocation();
-  const isChat = pathname.startsWith("/app");
+  const isChat = pathname.startsWith("/app"); // dùng để ẩn/hiện menu 3 chấm
 
   const [collapsed, setCollapsed] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    try { setCollapsed(localStorage.getItem("sbCollapsed") === "1"); } catch {}
+    try {
+      setCollapsed(localStorage.getItem("sbCollapsed") === "1");
+    } catch {}
   }, []);
+
   const toggle = () =>
-    setCollapsed(v => {
+    setCollapsed((v) => {
       const n = !v;
-      try { localStorage.setItem("sbCollapsed", n ? "1" : "0"); } catch {}
+      try {
+        localStorage.setItem("sbCollapsed", n ? "1" : "0");
+      } catch {}
       return n;
     });
 
-  // đóng menu khi click ra ngoài / nhấn ESC
+  // đóng menu khi click ra ngoài
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
       if (!menuRef.current?.contains(e.target as Node)) setMenuOpen(false);
     };
-    const onEsc = (e: KeyboardEvent) => { if (e.key === "Escape") setMenuOpen(false); };
+    const onEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuOpen(false);
+    };
     document.addEventListener("mousedown", onDown);
     document.addEventListener("keydown", onEsc);
     return () => {
@@ -39,8 +44,11 @@ export default function AppLayout() {
     };
   }, []);
 
-  // TODO
-  const onDelete  = () => { setMenuOpen(false); /* delete current chat   */ };
+  // TODO: xử lý xóa chat hiện tại
+  const onDelete = () => {
+    setMenuOpen(false);
+    /* code */
+  };
 
   return (
     <Shell data-collapsed={collapsed ? "true" : "false"}>
@@ -48,9 +56,9 @@ export default function AppLayout() {
         <Sidebar collapsed={collapsed} onToggle={toggle} />
       </aside>
 
-      <section className="main" data-chat={isChat ? "true" : "false"}>
-        {/* Header overlay */}
-        <Topbar data-chat={isChat ? "true" : "false"}>
+      <section className="main">
+        {/* Header overlay trong suốt cho các trang */}
+        <Topbar>
           <div className="chrome">
             <div className="title">{t("appTitle")}</div>
 
@@ -59,9 +67,14 @@ export default function AppLayout() {
                 <button
                   className="kebab"
                   aria-label="More actions"
-                  onClick={() => setMenuOpen(v => !v)}
+                  onClick={() => setMenuOpen((v) => !v)}
                 >
-                  <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
                     <circle cx="12" cy="5" r="2" fill="currentColor" />
                     <circle cx="12" cy="12" r="2" fill="currentColor" />
                     <circle cx="12" cy="19" r="2" fill="currentColor" />
@@ -70,9 +83,12 @@ export default function AppLayout() {
 
                 {menuOpen && (
                   <div className="menu" role="menu">
-                    <button className="item danger" onClick={onDelete} role="menuitem">
+                    <button
+                      className="item danger"
+                      onClick={onDelete}
+                      role="menuitem"
+                    >
                       <span className="icon" aria-hidden="true">
-                        {/* Trash / Delete icon */}
                         <svg width="18" height="18" viewBox="0 0 24 24">
                           <path fill="none" d="M0 0h24v24H0z" />
                           <path
@@ -90,8 +106,7 @@ export default function AppLayout() {
           </div>
         </Topbar>
 
-        {/* content fill, header không chiếm chỗ – đẩy xuống với trang không phải chat */}
-        <div className="content" data-chat={isChat ? "true" : "false"}>
+        <div className="content">
           <Outlet />
         </div>
       </section>
@@ -134,74 +149,109 @@ const Shell = styled.div`
     overflow: auto;
     background: ${({ theme }) => theme.colors.bg};
   }
-
-  /* Chỉ đẩy nội dung xuống dưới header cho trang KHÔNG phải chat */
-  .main[data-chat="false"] .content {
-    padding-top: calc(${HEADER_H}px + env(safe-area-inset-top));
-  }
 `;
 
-// Header overlay, trong suốt với trang chat
+/* Header overlay trong suốt cho các trang */
 const Topbar = styled.header`
-  position:absolute; inset:0 0 auto 0; height:60px; z-index:5;
-  pointer-events:none; /* mặc định: header không bắt sự kiện, trừ phần chúng ta bật lại */
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 60px;
+  z-index: 5;
+  pointer-events: none; /* cho phép click xuyên qua header */
 
-  .chrome{
-    height:60px; display:flex; align-items:center; justify-content:space-between; gap:10px;
-    padding:0 16px;
-    border-bottom:1px solid ${({theme})=>theme.colors.border};
-    background:${({theme})=>theme.colors.surface};     /* default cho trang khác /app */
-    font-weight:700;
+  .chrome {
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 0 16px;
 
-    /* mặc định (non-chat) header hoạt động bình thường */
-    pointer-events:auto;
-  }
-
-  /* Ở trang chat: transparent + không nhận sự kiện để click xuyên qua nội dung bên dưới */
-  &[data-chat="true"] .chrome{
-    border-bottom-color: transparent;
+    /* trong suốt hoàn toàn, không chặn click */
+    border-bottom: 0;
     background: transparent;
     backdrop-filter: none;
-    pointer-events: none;          /* <- cho phép click xuyên qua */
+    color: ${({ theme }) => theme.colors.accent2};
+    font-weight: 800;
+
+    pointer-events: none; /* không chặn nội dung bên dưới */
   }
 
-  /* Nhưng vẫn bật click cho khu vực actions (nút 3 chấm) */
-  .actions{ position:relative; pointer-events:auto; }
-  &[data-chat="true"] .actions,
-  &[data-chat="true"] .actions *{
-    pointer-events:auto;
+  /* Khu vực actions vẫn nhận tương tác */
+  .actions {
+    position: relative;
+    pointer-events: auto;
+  }
+  .actions * {
+    pointer-events: auto;
   }
 
-  .kebab{
-    display:grid; place-items:center; width:34px; height:34px;
-    border:1px solid ${({theme})=>theme.colors.border}; border-radius:999px; background:#fff;
-    color:${({theme})=>theme.colors.secondary}; cursor:pointer; transition:.2s;
+  .kebab {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border: 1px solid ${({ theme }) => theme.colors.border};
+    border-radius: 999px;
+    background: #fff;
+    color: ${({ theme }) => theme.colors.accent2};
+    cursor: pointer;
+    transition: 0.2s;
   }
-  .kebab:hover{ background:#fff5ef; border-color:#f0d2c5; color:${({theme})=>theme.colors.accent}; }
-
-  .menu{
-    position:absolute; right:0; top:44px; display:flex; flex-direction:column; gap:4px;
-    background:#fff; border:1px solid ${({theme})=>theme.colors.border}; border-radius:12px;
-    box-shadow:0 12px 36px rgba(0,0,0,.12); padding:8px; min-width:180px; z-index:10;
-  }
-
-  .menu .item{
-    height:36px; padding:0 10px; border:none; background:none; text-align:left;
-    border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:10px;
-    font-weight:600;
-    transition: transform .15s ease, background-color .15s ease, color .15s ease;
-  }
-  .menu .item:hover{ background:#fff5ef; transform: translateX(2px); }
-
-  .menu .item .icon{
-    width:18px; height:18px; display:grid; place-items:center;
-    color:${({theme})=>theme.colors.secondary};
+  .kebab:hover {
+    background: #fff5ef;
+    border-color: #f0d2c5;
+    box-shadow: 0 0 0 2px rgba(206, 122, 88, 0.18) inset;
   }
 
-  .menu .danger{
-    color:${({theme})=>theme.colors.danger};
+  .menu {
+    position: absolute;
+    right: 0;
+    top: 44px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    background: #fff;
+    border: 1px solid ${({ theme }) => theme.colors.border};
+    border-radius: 12px;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.12);
+    padding: 8px;
+    min-width: 180px;
+    z-index: 10;
   }
-  .menu .danger .icon{
-    color:${({theme})=>theme.colors.danger};
+
+  .menu .item {
+    height: 36px;
+    padding: 0 10px;
+    border: none;
+    background: none;
+    text-align: left;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+    color: ${({ theme }) => theme.colors.primary};
+    transition: transform 0.15s ease, background-color 0.15s ease,
+      color 0.15s ease;
+  }
+  .menu .item:hover {
+    background: #fff5ef;
+    transform: translateX(2px);
+    color: ${({ theme }) => theme.colors.accent};
+  }
+
+  .menu .item .icon {
+    width: 18px;
+    height: 18px;
+    color: ${({ theme }) => theme.colors.secondary};
+  }
+
+  .menu .danger {
+    color: ${({ theme }) => theme.colors.danger};
+  }
+  .menu .danger .icon {
+    color: ${({ theme }) => theme.colors.danger};
   }
 `;

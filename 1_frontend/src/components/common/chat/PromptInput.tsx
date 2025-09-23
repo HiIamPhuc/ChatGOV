@@ -14,17 +14,29 @@ const MAX_HEIGHT = 200;
 const PromptInput: React.FC<Props> = ({ onSend, maxWidth = 820, compact }) => {
   const { t } = useI18n();
   const [prompt, setPrompt] = useState("");
+  const [stack, setStack] = useState(false); // >1 dòng => true
   const taRef = useRef<HTMLTextAreaElement | null>(null);
 
   const autosize = () => {
     const ta = taRef.current;
     if (!ta) return;
+
+    // autosize
     ta.style.height = "0px";
     const next = Math.min(ta.scrollHeight, MAX_HEIGHT);
     ta.style.height = next + "px";
     ta.style.overflowY = ta.scrollHeight > MAX_HEIGHT ? "auto" : "hidden";
+
+    // Đo số dòng thực tế => > 1 dòng thì chuyển layout
+    const cs = window.getComputedStyle(ta);
+    const lh = parseFloat(cs.lineHeight || "0") || 20;
+    const lines = Math.round(ta.scrollHeight / lh);
+    setStack(lines > 1);
   };
-  useEffect(() => { autosize(); }, []);
+
+  useEffect(() => {
+    autosize();
+  }, []);
 
   const submit = () => {
     const text = prompt.trim();
@@ -37,17 +49,27 @@ const PromptInput: React.FC<Props> = ({ onSend, maxWidth = 820, compact }) => {
   return (
     <Outer style={{ ["--composer-max" as any]: `${maxWidth}px` }}>
       <div className={`composer ${compact ? "compact" : ""}`}>
-        <div className="box">
+        <div className={`box ${stack ? "stack" : ""}`}>
           <textarea
             ref={taRef}
             rows={1}
             className="msgInput"
             placeholder={t("enterPrompt")}
             value={prompt}
-            onChange={(e) => { setPrompt(e.target.value); autosize(); }}
-            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(); } }}
+            onChange={(e) => {
+              setPrompt(e.target.value);
+              autosize();
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                submit();
+              }
+            }}
           />
-          <SendButton onClick={submit} label={t("send")} />
+          <div className="send">
+            <SendButton onClick={submit} label={t("send")} />
+          </div>
         </div>
       </div>
     </Outer>
@@ -57,38 +79,65 @@ const PromptInput: React.FC<Props> = ({ onSend, maxWidth = 820, compact }) => {
 export default PromptInput;
 
 /* ===================== styles ===================== */
-const GOV = {
-  accent:  "#ce7a58", // chính
-  accent2: "#903938", // phụ
-  border:  "#e6e6e6",
-  surface: "#ffffff",
-  text:    "#222222",
-  muted:   "#777777",
-  bg:      "#f5f5f5",
-};
-
 const Outer = styled.div`
   width: min(100%, var(--composer-max, 820px));
   margin: 0 auto;
 
-  .composer.compact .box{ border-radius:12px; padding:8px 10px; }
-
-  .box{
-    display:flex; align-items:flex-end; gap:10px;
-    border:1px solid ${GOV.border}; background:${GOV.surface}; border-radius:16px;
-    padding:10px 12px;
-    box-shadow: 0 6px 22px rgba(0,0,0,.04);
+  .composer.compact .box {
+    border-radius: ${({ theme }) => theme.radii.md};
+    padding: 8px 10px;
   }
 
-  .msgInput{
-    flex:1 1 auto;
-    max-height:${MAX_HEIGHT}px; resize:none; overflow:auto;
-    background:transparent; border:none; outline:none; color:${GOV.text}; font-size:.98rem;
+  /* Dùng GRID để chuyển layout linh hoạt */
+  .box {
+    display: grid;
+    grid-template-columns: 1fr auto; /* mặc định: cùng hàng */
+    align-items: end;
+    column-gap: 10px;
+    row-gap: 8px;
+
+    border: 1px solid ${({ theme }) => theme.colors.border};
+    background: ${({ theme }) => theme.colors.surface};
+    border-radius: ${({ theme }) => theme.radii.lg};
+    padding: 10px 12px;
+    box-shadow: ${({ theme }) => theme.shadow};
   }
-  .msgInput::placeholder{ color:${GOV.muted}; }
-  .msgInput:focus{ outline:none; }
-  .msgInput::-webkit-scrollbar{ width:10px; }
-  .msgInput::-webkit-scrollbar-thumb{
-    background:#dadada; border-radius:10px; border:2px solid transparent; background-clip:content-box;
+
+  /* Khi input > 1 dòng: textarea lên hàng trên, nút gửi vẫn ở chỗ cũ */
+  .box.stack {
+    grid-template-columns: 1fr;
+  }
+  .box .send {
+    justify-self: end; /* luôn ở góc phải */
+  }
+
+  .msgInput {
+    flex: 1 1 auto;
+    max-height: ${MAX_HEIGHT}px;
+    resize: none;
+    overflow: auto;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: ${({ theme }) => theme.colors.primary};
+    font-size: 0.98rem;
+    line-height: 1.4; /* giúp tính số dòng ổn định */
+  }
+  .msgInput::placeholder {
+    color: ${({ theme }) => theme.colors.secondary};
+  }
+  .msgInput:focus {
+    outline: none;
+  }
+
+  /* scrollbar của textarea */
+  .msgInput::-webkit-scrollbar {
+    width: 10px;
+  }
+  .msgInput::-webkit-scrollbar-thumb {
+    background: ${({ theme }) => theme.colors.border};
+    border-radius: 10px;
+    border: 2px solid transparent;
+    background-clip: content-box;
   }
 `;

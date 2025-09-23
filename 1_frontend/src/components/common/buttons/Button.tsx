@@ -6,7 +6,7 @@ type ButtonProps = {
   onClick?: () => void;
   type?: "button" | "submit" | "reset";
   size?: "sm" | "md" | "lg";
-  wfull?: boolean;         // full width
+  wfull?: boolean; // full width
   disabled?: boolean;
   loading?: boolean;
   ariaLabel?: string;
@@ -85,44 +85,78 @@ const Btn = styled.button`
     ${({ theme }) => theme.colors.accent2}
   );
   background-size: 140% 100%;
-  transition: background-position .35s ease, transform .15s ease, filter .15s ease, box-shadow .15s ease, opacity .2s ease;
+  transition: background-position 0.35s ease, transform 0.15s ease,
+    filter 0.15s ease, box-shadow 0.15s ease, opacity 0.2s ease;
 
-  box-shadow: 0 10px 24px rgba(206,122,88,.25);
+  box-shadow: 0 10px 24px rgba(206, 122, 88, 0.25);
 
   /* shine */
   overflow: hidden;
-  &::before{
-    content:"";
-    position:absolute; inset:-1px; pointer-events:none;
+  &::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    pointer-events: none;
     background: radial-gradient(
-      220px circle at var(--mx,50%) var(--my,50%),
-      rgba(255,255,255,.28),
-      rgba(255,255,255,0) 40%
+      220px circle at var(--mx, 50%) var(--my, 50%),
+      rgba(255, 255, 255, 0.28),
+      rgba(255, 255, 255, 0) 40%
     );
-    opacity:0; transition:opacity .2s ease;
+    opacity: 0;
+    transition: opacity 0.2s ease;
   }
 
-  &:hover{ background-position: 100% 0; filter: brightness(.98); }
-  &:hover::before{ opacity:1; }
-  &:active{ transform: scale(.98); }
-  &:focus-visible{
-    outline: none;
-    box-shadow:
-      0 0 0 3px rgba(206,122,88,.25),
-      0 10px 24px rgba(206,122,88,.25);
+  &:hover {
+    background-position: 100% 0;
+    filter: brightness(0.98);
   }
-  &[disabled]{ opacity:.6; cursor:not-allowed; filter:grayscale(.05); }
+  &:hover::before {
+    opacity: 1;
+  }
+  &:active {
+    transform: scale(0.98);
+  }
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(206, 122, 88, 0.25),
+      0 10px 24px rgba(206, 122, 88, 0.25);
+  }
+  &[disabled] {
+    opacity: 0.6;
+    cursor: not-allowed;
+    filter: grayscale(0.05);
+  }
 
   /* size */
-  &[data-size="sm"]{ height:var(--h-sm); padding:0 12px; border-radius:10px; }
-  &[data-size="md"]{ height:var(--h-md); }
-  &[data-size="lg"]{ height:var(--h-lg); padding:0 18px; border-radius:14px; }
+  &[data-size="sm"] {
+    height: var(--h-sm);
+    padding: 0 12px;
+    border-radius: 10px;
+  }
+  &[data-size="md"] {
+    height: var(--h-md);
+  }
+  &[data-size="lg"] {
+    height: var(--h-lg);
+    padding: 0 18px;
+    border-radius: 14px;
+  }
 
   /* full width */
-  &[data-block="1"]{ width:100%; }
+  &[data-block="1"] {
+    width: 100%;
+  }
 
-  .icon{ display:inline-flex; }
-  .icon.left{ margin-left:-2px; }
-  .icon.right{ margin-right:-2px; }
-  .txt{ line-height:1; }
+  .icon {
+    display: inline-flex;
+  }
+  .icon.left {
+    margin-left: -2px;
+  }
+  .icon.right {
+    margin-right: -2px;
+  }
+  .txt {
+    line-height: 1;
+  }
 `;

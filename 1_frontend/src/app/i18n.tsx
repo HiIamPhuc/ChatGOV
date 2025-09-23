@@ -6,6 +6,7 @@ type Dict = Record<string, string>;
 const DICTS: Record<Lang, Dict> = {
   en: {
     appTitle: "ChatGOV",
+
     // Auth & shared
     signin: "Sign In",
     signup: "Sign Up",
@@ -22,6 +23,7 @@ const DICTS: Record<Lang, Dict> = {
     loggingIn: "Logging in...",
     creating: "Creating...",
     logout: "Logout",
+
     // Chat & sidebar
     history: "History",
     heroTitle: "What are you working on?",
@@ -31,22 +33,32 @@ const DICTS: Record<Lang, Dict> = {
     language: "Language",
     signedOut: "Signed out.",
     send: "Send",
+    newChat: "New chat",
+    searchChats: "Search chats",
+    chats: "Chats",
+    more: "More",
+    rename: "Rename",
+    delete: "Delete",
+
     // App
     addLink: "Add website link",
     enterPrompt: "Type your request...",
     linkPlaceholder: "Paste website link (e.g. https://dichvucong.gov.vn)",
     urlInPromptWarn:
       "You pasted a URL into the Prompt. Please put it into + link box instead.",
+
     // Reset (request email)
     resetTitle: "Reset password",
     resetBtn: "Send reset link",
     resetSent: "Password reset email sent (if the email exists).",
+
     // Reset flow (set new password page)
     setNewPassword: "Set a new password",
     newPassword: "New password",
     updatePassword: "Update password",
     passwordUpdated: "Password updated successfully.",
     passwordTooShort: "Password must be at least 8 characters.",
+
     // Profile
     profile: "Profile",
     personalInfo: "Your personal information",
@@ -59,6 +71,14 @@ const DICTS: Record<Lang, Dict> = {
     province: "Province",
     phone: "Phone",
     dob: "Date of birth",
+    changePassword: "Change password",
+    changePasswordSubtitle: "Update your password for this account",
+    currentPassword: "Current password",
+    confirmNewPassword: "Confirm new password",
+    updating: "Updating...",
+    passwordNotMatch: "New password confirmation does not match.",
+    passwordUpdateFailed: "Failed to update password.",
+
     // Toast / statuses
     signupVerify: "Sign-up success. Verification email sent.",
     signinSuccess: "Sign-in success.",
@@ -66,9 +86,11 @@ const DICTS: Record<Lang, Dict> = {
 
     // Disclaimer
     chatDisclaimer: "ChatGOV can make mistakes. Check important info.",
+    
   },
   vi: {
     appTitle: "ChatGOV",
+
     // Auth & shared
     signin: "Đăng nhập",
     signup: "Đăng ký",
@@ -85,6 +107,7 @@ const DICTS: Record<Lang, Dict> = {
     loggingIn: "Đang đăng nhập...",
     creating: "Đang tạo...",
     logout: "Đăng xuất",
+
     // Chat & sidebar
     history: "Lịch sử",
     heroTitle: "Bạn đang muốn làm gì?",
@@ -94,21 +117,32 @@ const DICTS: Record<Lang, Dict> = {
     language: "Ngôn ngữ",
     signedOut: "Đã đăng xuất.",
     send: "Gửi",
+    newChat: "Đoạn chat mới",
+    searchChats: "Tìm kiếm đoạn chat",
+    chats: "Các phiên Chat",
+    more: "Thêm tuỳ chọn",
+    rename: "Đổi tên",
+    delete: "Xoá",
+    
+
     // App
     addLink: "Thêm link website",
-    enterPrompt: "Nhập yêu cầu...",
+    enterPrompt: "Nhập yêu cầu của bạn...",
     linkPlaceholder: "Dán link website (vd: https://dichvucong.gov.vn)",
     urlInPromptWarn: "Bạn dán URL trong Prompt. Hãy nhập link vào ô dấu +.",
+
     // Reset (request email)
     resetTitle: "Quên mật khẩu",
     resetBtn: "Gửi link đặt lại",
     resetSent: "Đã gửi email đặt lại mật khẩu (nếu email tồn tại).",
+
     // Reset flow (set new password page)
     setNewPassword: "Đặt mật khẩu mới",
     newPassword: "Mật khẩu mới",
     updatePassword: "Cập nhật mật khẩu",
     passwordUpdated: "Đổi mật khẩu thành công.",
     passwordTooShort: "Mật khẩu phải có tối thiểu 8 ký tự.",
+
     // Profile
     profile: "Hồ sơ",
     personalInfo: "Thông tin cá nhân của bạn",
@@ -119,6 +153,14 @@ const DICTS: Record<Lang, Dict> = {
     city: "Nơi sống (Quận/Huyện)",
     phone: "Số điện thoại",
     dob: "Ngày sinh",
+    changePassword: "Đổi mật khẩu",
+    changePasswordSubtitle: "Cập nhật mật khẩu cho tài khoản của bạn",
+    currentPassword: "Mật khẩu hiện tại",
+    confirmNewPassword: "Xác nhận mật khẩu mới",
+    updating: "Đang cập nhật...",
+    passwordNotMatch: "Xác nhận mật khẩu mới không khớp.",
+    passwordUpdateFailed: "Cập nhật mật khẩu không thành công.",
+
     // Toast / statuses
     signupVerify: "Đăng ký thành công. Đã gửi email xác nhận.",
     signinSuccess: "Đăng nhập thành công.",
