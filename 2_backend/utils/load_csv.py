@@ -10,15 +10,22 @@ from urllib.parse import urlparse, parse_qs
 import sys
 
 aliases = {
-    'id': 'Mã thủ tục',
-    'url': 'Links',
-    'title': 'Tên thủ tục',
-    'content': [
-        'Lĩnh vực', 'Cơ quan thực hiện', 'Mức độ cung cấp dịch vụ công trực tuyến',
-        'Cách thức thực hiện', 'Trình tự thực hiện', 'Thời hạn giải quyết',
-        'Phí', 'Lệ Phí', 'Thành phần hồ sơ', 'Yêu cầu - điều kiện',
-        'Căn cứ pháp lý', 'Biểu mẫu', 'Kết quả thực hiện', ''
-    ]
+    'ma_thu_tuc': 'Mã thủ tục',
+    'links': 'Links',
+    'ten_thu_tuc': 'Tên thủ tục',
+    'linh_vuc': 'Lĩnh vực',
+    'co_quan_thuc_hien': 'Cơ quan thực hiện',
+    'muc_do_cung_cap_dich_vu_cong_truc_tuyen': 'Mức độ cung cấp dịch vụ công trực tuyến',
+    'cach_thuc_thuc_hien': 'Cách thức thực hiện',
+    'trinh_tu_thuc_hien': 'Trình tự thực hiện',
+    'thoi_han_giai_quyet': 'Thời hạn giải quyết',
+    'phi': 'Phí',
+    'le_phi': 'Lệ Phí',
+    'thanh_phan_ho_so': 'Thành phần hồ sơ',
+    'yeu_cau_dieu_kien': 'Yêu cầu - điều kiện',
+    'can_cu_phap_ly': 'Căn cứ pháp lý',
+    'bieu_mau': 'Biểu mẫu',
+    'ket_qua_thuc_hien': 'Kết quả thực hiện',
 }
 
 def extract_matt_param(url: str) -> str:
@@ -52,10 +59,24 @@ if __name__ == "__main__":
     for row in data:
         service_data = {
             'id': extract_matt_param(row[aliases['url']]),
-            'service_id': row[aliases['id']],
-            'title': row[aliases['title']],
-            'url': row[aliases['url']],
-            'content': {key : row.get(key, '') for key in row if key in aliases['content']}
+            'ma_thu_tuc': row[aliases['ma_thu_tuc']],
+            'ten_thu_tuc': row[aliases['ten_thu_tuc']],
+            'links': row[aliases['links']],
+            'linh_vuc': row.get(aliases['linh_vuc'], ''),
+            'co_quan_thuc_hien': row.get(aliases['co_quan_thuc_hien'], ''), 
+            'muc_do_cung_cap_dich_vu_cong_truc_tuyen': row.get(aliases['muc_do_cung_cap_dich_vu_cong_truc_tuyen'], ''),
+            'cach_thuc_thuc_hien': row.get(aliases['cach_thuc_thuc_hien'], ''),
+            'trinh_tu_thuc_hien': row.get(aliases['trinh_tu_thuc_hien'], ''),
+            'thoi_han_giai_quyet': row.get(aliases['thoi_han_giai_quyet'], ''),
+            'phi': row.get(aliases['phi'], ''),
+            'le_phi': row.get(aliases['le_phi'], ''),
+            'thanh_phan_ho_so': row.get(aliases['thanh_phan_ho_so'], ''),
+            'yeu_cau_dieu_kien': row.get(aliases['yeu_cau_dieu_kien'], ''),
+            'can_cu_phap_ly': row.get(aliases['can_cu_phap_ly'], ''),
+            'bieu_mau': row.get(aliases['bieu_mau'], ''),
+            'ket_qua_thuc_hien': row.get(aliases['ket_qua_thuc_hien'], ''),
+            
+            # 'content': {key : row.get(key, '') for key in row if key in aliases['content']}
         }
         # for key in service_data:
         #     print(f"{key}: {service_data[key]}")
