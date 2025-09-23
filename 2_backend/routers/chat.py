@@ -1,20 +1,13 @@
 import uuid
 from fastapi import APIRouter, HTTPException, Body
-from pydantic import BaseModel
+from .requests import StartSessionRequest, ChatRequest
 from ..database import get_user, save_user, get_session, save_session, serialize_chat_history, deserialize_chat_history
-from ..graph import compile_graph, SessionState
+from ..graph import compile_graph, MessagesState
 from ..models import Session, User
 
 router = APIRouter()
 
-class StartSessionRequest(BaseModel):
-    user_id: str  # Should be the auth.users.id (UUID)
-
-class ChatRequest(BaseModel):
-    session_id: str
-    message: str
-
-@router.post("/start_session")
+@router.post("/api/chat/start_session")
 async def start_session(request: StartSessionRequest = Body(...)):
     user = get_user(request.user_id)
     print(user)
@@ -35,7 +28,7 @@ async def start_session(request: StartSessionRequest = Body(...)):
     
     return {"session_id": session_id}
 
-@router.post("/chat")
+@router.post("/api/chat/")
 async def chat(request: ChatRequest = Body(...)):
     session_data = get_session(request.session_id)
     if not session_data:
@@ -46,10 +39,10 @@ async def chat(request: ChatRequest = Body(...)):
     chat_history = deserialize_chat_history(session_data.chat_history)
     user_message = {"role": "user", "content": request.message, "type": "human"}
     
-    initial_state: SessionState = {
+    initial_state: MessagesState = {
         "messages": chat_history + [user_message],
     }
-    final_state = None
+    final_state = []
     for step in graph.stream(initial_state, stream_mode="values"):
         final_state = step
     
