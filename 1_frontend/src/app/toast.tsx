@@ -98,8 +98,8 @@ const toneColor: Record<Tone, string> = {
   success: "#3AD29F",
 };
 
-const OFFSET = 8;   // độ to hơn card khi CHƯA hover (px)
-const HOVER  = 10;  // biên độ trượt khi hover (px)
+const PAD   = 5;   // underlay to hơn card
+const HOVER = 10;  // độ tịnh tiến khi hover
 
 const Wrap = styled.div`
   position: fixed;
@@ -111,46 +111,43 @@ const Wrap = styled.div`
   z-index: 9999;
   pointer-events: none;
 
-  /* chừa chỗ cho underlay lớn hơn + trượt */
-  padding-top: ${OFFSET}px;
-  padding-left: ${OFFSET}px;
-  padding-right: ${HOVER + OFFSET}px;
-  padding-bottom: ${HOVER + OFFSET}px;
+  /* chừa chỗ để underlay trượt ra mà không tràn viewport */
+  padding-right: ${HOVER + PAD}px;
+  padding-bottom: ${HOVER + PAD}px;
 `;
-
 
 const Item = styled.div<{ tone: Tone }>`
   position: relative;
   display: inline-block;
   pointer-events: auto;
 
-  /* Underlay theo tone: LỚN HƠN card ngay từ đầu (to đều bốn phía) */
+  /* Underlay: to hơn nhờ padding, bù lại bằng margin âm để KHÍT ở trạng thái thường */
   &::before{
-    content: "";
-    position: absolute;
-    inset: -${OFFSET}px;                          
-    border-radius: calc(12px + ${OFFSET}px);      
-    background: ${({ tone }) => toneColor[tone]};
-    z-index: 0;                                    /* dưới Card */
-    transform: translate(0, 0);
+    content:"";
+    position:absolute;
+    top:0; left:0; width:100%; height:100%;
+    background:${({tone}) => toneColor[tone]};
+    z-index:-1;
+
+    padding:${PAD}px;     /* làm to hơn 4 phía */
+    margin:-${PAD}px;     /* bù lại */
+    transform: translate(0,0);   /* trạng thái thường: trùng khít */
     transition: transform .3s ease;
   }
 
-  /* Top-right corner: trượt vào-trong để không tràn viewport */
+  /* Hover: tịnh tiến tone xuống dưới & sang trái */
   &:hover::before{
     transform: translate(-${HOVER}px, ${HOVER}px);
   }
 `;
 
-/* Card TRÊN: chỉ nền kem, không viền/outline */
 const Card = styled.div`
   position: relative;
-  z-index: 1;
+  z-index: 0;
   width: 320px;
-  border-radius: 12px;
+  border-radius: 0; 
   overflow: hidden;
-
-  background: #E9E9E9;
+  background: #fff0d1;
 
   animation: ${slideIn} 260ms ease-out both;
   &[data-leaving="true"] { animation: ${slideOut} 260ms ease-in both; }
@@ -162,7 +159,7 @@ const Card = styled.div`
 
   .exit-btn{
     position:absolute; right:8px; top:8px; width:30px; height:30px;
-    background:transparent; border:none; cursor:pointer; border-radius:8px;
+    background:transparent; border:none; cursor:pointer; border-radius:6px;
   }
   .exit-btn:hover{ background:#EADABA; }
 `;

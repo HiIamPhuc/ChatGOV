@@ -4,7 +4,7 @@ import styled from "styled-components";
 type Props = {
   onClick: () => void;
   label?: string;
-  size?: number;      // px
+  size?: number; // px
   disabled?: boolean;
 };
 
@@ -26,8 +26,12 @@ const SendButton: React.FC<Props> = ({
       >
         <div className="plane">
           <div className="plane-bob">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
-                 width={size} height={size}>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              width={size}
+              height={size}
+            >
               <path fill="none" d="M0 0h24v24H0z" />
               <path
                 fill="currentColor"
@@ -55,9 +59,9 @@ const SendWrap = styled.div`
     white-space: nowrap;
 
     /* sizing */
-    --icon: 18px;              /* fallback nếu không truyền style */
+    --icon: 18px; /* fallback nếu không truyền style */
     --padX: 0.9em;
-    --gapL: 0.45em;            /* khoảng cách text so với icon “ảo” */
+    --gapL: 0.45em; /* khoảng cách text so với icon “ảo” */
     font-family: inherit;
     font-size: 0.95rem;
     color: #fff;
@@ -69,7 +73,8 @@ const SendWrap = styled.div`
     cursor: pointer;
 
     /* motion */
-    transition: transform .15s ease, filter .15s ease, box-shadow .15s ease, opacity .15s ease;
+    transition: transform 0.15s ease, filter 0.15s ease, box-shadow 0.15s ease,
+      opacity 0.15s ease;
 
     /* theme */
     background: linear-gradient(
@@ -77,43 +82,52 @@ const SendWrap = styled.div`
       ${({ theme }) => theme.colors.accent},
       ${({ theme }) => theme.colors.accent2}
     );
-    box-shadow: 0 6px 18px rgba(206,122,88,.24);
+    box-shadow: 0 6px 18px rgba(206, 122, 88, 0.24);
   }
 
-  button:hover { filter: brightness(0.97); }
-  button:active { transform: scale(0.98); }
+  button:hover {
+    filter: brightness(0.97);
+  }
+  button:active {
+    transform: scale(0.98);
+  }
   button:focus-visible {
     outline: none;
-    box-shadow:
-      0 0 0 3px rgba(206,122,88,.25),
-      0 6px 18px rgba(206,122,88,.24);
+    box-shadow: 0 0 0 3px rgba(206, 122, 88, 0.25),
+      0 6px 18px rgba(206, 122, 88, 0.24);
   }
 
   /* ICON (máy bay) — đặt absolute để không đẩy chữ */
   .plane {
     position: absolute;
-    left: var(--padX);               /* vị trí ban đầu sát trái */
+    left: var(--padX); /* vị trí ban đầu sát trái */
     top: 50%;
     transform: translateY(-50%);
     width: var(--icon);
     height: var(--icon);
     display: grid;
     place-items: center;
-    transition: left .35s ease, transform .35s ease, opacity .2s ease;
+    transition: left 0.35s ease, transform 0.35s ease, opacity 0.2s ease;
     transform-origin: center center;
   }
 
   /* bob nhẹ khi hover */
-  .plane-bob { transition: transform .35s ease; }
+  .plane-bob {
+    transition: transform 0.35s ease;
+  }
   @keyframes fly-1 {
-    from { transform: translateY(0.08em); }
-    to   { transform: translateY(-0.08em); }
+    from {
+      transform: translateY(0.08em);
+    }
+    to {
+      transform: translateY(-0.08em);
+    }
   }
 
   /* LABEL — trượt ra ngoài bên phải khi hover, không đổi width button */
   .label {
     display: inline-block;
-    transition: transform .35s ease, opacity .35s ease;
+    transition: transform 0.35s ease, opacity 0.35s ease;
     will-change: transform;
   }
 
@@ -123,7 +137,7 @@ const SendWrap = styled.div`
     transform: translate(-50%, -50%) rotate(45deg) scale(1.08);
   }
   button:hover .plane-bob {
-    animation: fly-1 .6s ease-in-out infinite alternate;
+    animation: fly-1 0.6s ease-in-out infinite alternate;
   }
   button:hover .label {
     transform: translateX(120%);
@@ -132,18 +146,24 @@ const SendWrap = styled.div`
 
   /* DISABLED */
   button[disabled] {
-    opacity: .6;
+    opacity: 0.6;
     cursor: not-allowed;
-    filter: grayscale(.1);
+    filter: grayscale(0.1);
   }
 
   /* MOBILE: ẩn chữ để tiết kiệm chỗ */
   @media (max-width: 600px) {
-    .label { display: none; }
+    .label {
+      display: none;
+    }
   }
 
   /* giảm motion nếu user chọn reduced motion */
   @media (prefers-reduced-motion: reduce) {
-    .plane, .label { transition: none; animation: none; }
+    .plane,
+    .label {
+      transition: none;
+      animation: none;
+    }
   }
 `;
