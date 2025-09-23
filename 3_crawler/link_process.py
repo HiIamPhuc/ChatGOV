@@ -105,21 +105,7 @@ def extract_download_links(detail_elem, base_url="https://dichvucong.bocongan.go
                 else:
                     full_url = base_url + "/" + href
 
-                # Lấy tên file hoặc mô tả
-                file_description = ""
-                # Tìm mô tả trong cùng li element
-                li_parent = anchor.find_parent("li")
-                if li_parent:
-                    span_elem = li_parent.find("span")
-                    if span_elem:
-                        file_description = span_elem.get_text(strip=True)
-
-                if not file_description:
-                    file_description = link_text
-
-                download_links.append(
-                    {"url": full_url, "description": file_description}
-                )
+                download_links.append(full_url)
 
     return download_links
 
@@ -313,13 +299,10 @@ async def main(concurrency: int = 5):
                 # nếu crawl lỗi, ghi link + tên thủ tục + empty columns
                 row = [r["link"], r["ten_thu_tuc"]] + [""] * (len(HEADERS) - 2)
             else:
-                # Tạo string cho download links
-                download_links_str = ""
+                # Tạo string cho download links - chỉ lưu link, ngăn cách bằng " || "
+                download_links_str = "None"
                 if r.get("download_links"):
-                    link_strs = []
-                    for dl in r["download_links"]:
-                        link_strs.append(f"{dl['description']}: {dl['url']}")
-                    download_links_str = " || ".join(link_strs)
+                    download_links_str = " || ".join(r["download_links"])
 
                 # lấy các cột theo HEADERS (order cố định)
                 row_vals = [
@@ -339,15 +322,13 @@ async def main(concurrency: int = 5):
             for u in r.get("unmatched", []):
                 writer.writerow([r["link"], r["ten_thu_tuc"], u["title"], u["detail"]])
 
-    # Ghi file download links riêng để dễ theo dõi
+    # Ghi file download links riêng để dễ theo dõi - chỉ lưu link
     with open("download_links.csv", "w", encoding="utf-8", newline="") as f:
         writer = csv.writer(f)
-        writer.writerow(["link", "ten_thu_tuc", "file_description", "download_url"])
+        writer.writerow(["link", "ten_thu_tuc", "download_url"])
         for r in results:
             for dl in r.get("download_links", []):
-                writer.writerow(
-                    [r["link"], r["ten_thu_tuc"], dl["description"], dl["url"]]
-                )
+                writer.writerow([r["link"], r["ten_thu_tuc"], dl])
 
     print("Done. Outputs:")
     print(" - extracted_structured.csv")
