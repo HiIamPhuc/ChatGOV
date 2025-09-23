@@ -24,6 +24,7 @@ HEADERS = [
     "Căn cứ pháp lý",
     "Biểu mẫu",
     "Kết quả thực hiện",
+    "Link tải tài liệu (nếu có)",  # Thêm cột mới
 ]
 
 # --- Mapping tiêu đề trên trang -> trường CSV (dạng keyword để so khớp) ---
@@ -76,6 +77,53 @@ def normalize_text(s: str) -> str:
     return s
 
 
+def extract_download_links(detail_elem, base_url="https://dichvucong.bocongan.gov.vn"):
+    """Extract download links from the detail element"""
+    download_links = []
+
+    if detail_elem:
+        # Tìm tất cả các link tải xuống
+        download_anchors = detail_elem.find_all("a", href=True)
+
+        for anchor in download_anchors:
+            href = anchor.get("href", "")
+            link_text = anchor.get_text(strip=True)
+
+            # Kiểm tra xem có phải là link tải xuống không
+            if (
+                "tải về" in link_text.lower()
+                or "download" in link_text.lower()
+                or anchor.find("i", class_="fa-download")
+                or href.endswith((".doc", ".docx", ".pdf", ".xls", ".xlsx"))
+            ):
+
+                # Tạo full URL nếu href là relative path
+                if href.startswith("/"):
+                    full_url = base_url + href
+                elif href.startswith("http"):
+                    full_url = href
+                else:
+                    full_url = base_url + "/" + href
+
+                # Lấy tên file hoặc mô tả
+                file_description = ""
+                # Tìm mô tả trong cùng li element
+                li_parent = anchor.find_parent("li")
+                if li_parent:
+                    span_elem = li_parent.find("span")
+                    if span_elem:
+                        file_description = span_elem.get_text(strip=True)
+
+                if not file_description:
+                    file_description = link_text
+
+                download_links.append(
+                    {"url": full_url, "description": file_description}
+                )
+
+    return download_links
+
+
 # Pre-normalize keyword lists
 NORMALIZED_KEYWORDS = {
     header: [normalize_text(k) for k in keywords]
@@ -96,6 +144,7 @@ async def fetch_and_extract(
                 "error": str(e),
                 "data": {},
                 "unmatched": [],
+                "download_links": [],
             }
 
         if not result.success:
@@ -105,6 +154,7 @@ async def fetch_and_extract(
                 "error": "crawl_failed",
                 "data": {},
                 "unmatched": [],
+                "download_links": [],
             }
 
         # prefer HTML (vì cấu trúc class cần giữ), nếu không có fallback markdown (cảnh báo)
@@ -120,13 +170,15 @@ async def fetch_and_extract(
                 "error": "no_html",
                 "data": {},
                 "unmatched": [],
+                "download_links": [],
             }
 
         soup = BeautifulSoup(html, "lxml")
         items = soup.select("div.tthc-list-item")
-        # prepare empty mapping for this page (exclude Links and Tên thủ tục columns)
-        data = {h: "" for h in HEADERS[2:]}
+        # prepare empty mapping for this page (exclude Links, Tên thủ tục, và Link tải tài liệu columns)
+        data = {h: "" for h in HEADERS[2:-1]}  # Exclude first 2 and last 1 columns
         unmatched = []
+        all_download_links = []
 
         for item in items:
             title_elem = item.select_one(".item-title")
@@ -137,6 +189,9 @@ async def fetch_and_extract(
 
             norm_title = normalize_text(title_text)
 
+            # Extract download links from detail element
+            download_links = extract_download_links(detail_elem)
+
             matched = False
             for header, keywords in NORMALIZED_KEYWORDS.items():
                 for kw in keywords:
@@ -146,6 +201,11 @@ async def fetch_and_extract(
                             data[header] = data[header] + " || " + detail_text
                         else:
                             data[header] = detail_text
+
+                        # Nếu là phần Biểu mẫu và có download links, lưu lại
+                        if header == "Biểu mẫu" and download_links:
+                            all_download_links.extend(download_links)
+
                         matched = True
                         break
                 if matched:
@@ -161,6 +221,7 @@ async def fetch_and_extract(
             "error": None,
             "data": data,
             "unmatched": unmatched,
+            "download_links": all_download_links,
         }
 
 
@@ -168,7 +229,12 @@ async def main(concurrency: int = 5):
     # Đọc links và tên thủ tục from CSV
     procedures = []
 
-    with open("all_procedures_with_names.csv", "r", encoding="utf-8", newline="") as f:
+    with open(
+        "/home/aaronpham/Coding/AI_thuc_chien/AI_Wrapper-WebPage/3_crawler/data/all_procedures_with_names.csv",
+        "r",
+        encoding="utf-8",
+        newline="",
+    ) as f:
         reader = csv.reader(f)
         next(reader, None)  # Skip header
 
@@ -231,6 +297,7 @@ async def main(concurrency: int = 5):
                                 "error": str(res),
                                 "data": {},
                                 "unmatched": [],
+                                "download_links": [],
                             }
                         )
                 else:
@@ -246,11 +313,22 @@ async def main(concurrency: int = 5):
                 # nếu crawl lỗi, ghi link + tên thủ tục + empty columns
                 row = [r["link"], r["ten_thu_tuc"]] + [""] * (len(HEADERS) - 2)
             else:
+                # Tạo string cho download links
+                download_links_str = ""
+                if r.get("download_links"):
+                    link_strs = []
+                    for dl in r["download_links"]:
+                        link_strs.append(f"{dl['description']}: {dl['url']}")
+                    download_links_str = " || ".join(link_strs)
+
                 # lấy các cột theo HEADERS (order cố định)
                 row_vals = [
-                    r["data"].get(h, "") for h in HEADERS[2:]
-                ]  # Skip Links và Tên thủ tục
-                row = [r["link"], r["ten_thu_tuc"]] + row_vals
+                    r["data"].get(h, "")
+                    for h in HEADERS[
+                        2:-1
+                    ]  # Skip Links, Tên thủ tục, và Link tải tài liệu
+                ]
+                row = [r["link"], r["ten_thu_tuc"]] + row_vals + [download_links_str]
             writer.writerow(row)
 
     # Ghi unmatched để bạn review (nếu có)
@@ -261,15 +339,28 @@ async def main(concurrency: int = 5):
             for u in r.get("unmatched", []):
                 writer.writerow([r["link"], r["ten_thu_tuc"], u["title"], u["detail"]])
 
+    # Ghi file download links riêng để dễ theo dõi
+    with open("download_links.csv", "w", encoding="utf-8", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["link", "ten_thu_tuc", "file_description", "download_url"])
+        for r in results:
+            for dl in r.get("download_links", []):
+                writer.writerow(
+                    [r["link"], r["ten_thu_tuc"], dl["description"], dl["url"]]
+                )
+
     print("Done. Outputs:")
     print(" - extracted_structured.csv")
     print(" - unmatched_items.csv (check for titles that need mapping)")
+    print(" - download_links.csv (all download links found)")
     print(f"Processed {len(results)} procedures (concurrency={concurrency})")
 
     # Show some stats
     success_count = len([r for r in results if not r.get("error")])
     error_count = len([r for r in results if r.get("error")])
+    download_links_count = sum(len(r.get("download_links", [])) for r in results)
     print(f"Success: {success_count}, Errors: {error_count}")
+    print(f"Total download links found: {download_links_count}")
 
 
 if __name__ == "__main__":
