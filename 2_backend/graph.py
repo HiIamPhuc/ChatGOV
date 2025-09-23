@@ -23,17 +23,18 @@ def generate(state: MessagesState):
             break
     tool_messages = recent_tool_messages[::-1]
 
+    # If we have tool results, it means we found some government services
     docs_content = "\n\n".join(doc.content for doc in tool_messages)
+    
+    # Import the prompts
+    from .prompts import create_system_message, create_out_of_scope_response
+    
+    # If no relevant services found, likely the query is out of scope
     system_message_content = (
-        f"You are an AI assistant specialized in helping users discover and navigate services on {WEBSITE_NAME}. "
-        "Use the retrieved service information to answer questions accurately. "
-        "If the information isn't available or you don't know, say so. "
-        "Keep answers helpful, concise, and focused on the user's query. "
-        "For questions about services, provide details like title, URL, and relevant content. "
-        "For procedural questions, provide step-by-step guidance if available in the context."
-        "\n\n"
-        f"Retrieved Services:\n{docs_content}"
+        create_system_message(docs_content) if docs_content.strip() 
+        else create_system_message() + "\n\n" + create_out_of_scope_response()
     )
+    
     conversation_messages = [
         msg 
         for msg in state["messages"]
