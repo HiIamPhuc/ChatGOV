@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import styled from "styled-components";
 import { useI18n } from "@/app/i18n";
+import Button from "@/components/common/buttons/Button";
 
 type Props = {
   onSubmit: (email: string, password: string) => void;
@@ -10,146 +11,117 @@ type Props = {
 const LoginForm: React.FC<Props> = ({ onSubmit, loading }) => {
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
+  const [showPw, setShowPw] = useState(false);
   const { t } = useI18n();
 
   return (
     <StyledWrapper>
-      <form
-        className="form"
-        onSubmit={(e) => {
-          e.preventDefault();
-          onSubmit(email.trim(), pw);
-        }}
-      >
-        <p id="heading">{t("signin")}</p>
+      <section className="container">
+        <header>{t("signin")}</header>
 
-        <div className="field">
-          <svg
-            className="input-icon"
-            xmlns="http://www.w3.org/2000/svg"
-            width={16}
-            height={16}
-            viewBox="0 0 24 24"
-            fill="currentColor"
-          >
-            <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" />
-          </svg>
-          <input
-            required
-            placeholder={t("email")}
-            className="input-field"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </div>
+        <form
+          className="form"
+          onSubmit={(e) => { e.preventDefault(); onSubmit(email.trim(), pw); }}
+        >
+          <div className="input-box">
+            <label>{t("email")}</label>
+            <input
+              required
+              placeholder="Email của bạn"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
 
-        <div className="field">
-          <svg
-            className="input-icon"
-            xmlns="http://www.w3.org/2000/svg"
-            width={16}
-            height={16}
-            viewBox="0 0 16 16"
-            fill="currentColor"
-          >
-            <path d="M8 1a2 2 0 0 1 2 2v4H6V3a2 2 0 0 1 2-2zm3 6V3a3 3 0 0 0-6 0v4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z" />
-          </svg>
-          <input
-            required
-            placeholder={t("password")}
-            className="input-field"
-            type="password"
-            value={pw}
-            onChange={(e) => setPw(e.target.value)}
-          />
-        </div>
+          <div className="input-box">
+            <label>{t("password")}</label>
+            <div className="password">
+              <input
+                required
+                placeholder="Mật khẩu của bạn"
+                type={showPw ? "text" : "password"}
+                value={pw}
+                onChange={(e) => setPw(e.target.value)}
+              />
+              <button
+                type="button"
+                className="toggle"
+                onClick={() => setShowPw((s) => !s)}
+                aria-label={showPw ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                title={showPw ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+              >
+                {showPw ? eyeOff : eye}
+              </button>
+            </div>
+          </div>
 
-        <div className="btn">
-          <button disabled={!!loading} className="button1" type="submit">
+          <Button type="submit" wfull size="md" disabled={!!loading}>
             {loading ? t("loggingIn") : t("login")}
-          </button>
-        </div>
-      </form>
+          </Button>
+        </form>
+      </section>
     </StyledWrapper>
   );
 };
 
+export default LoginForm;
+
+/* ===================== styles (theme light) ===================== */
 const StyledWrapper = styled.div`
-  .form {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    padding: 2em;
-    background: ${({ theme }) => theme.colors.surface};
-    border-radius: ${({ theme }) => theme.radii.lg};
-    transition: 0.3s;
-    box-shadow: ${({ theme }) => theme.shadow};
-    border: 1px solid ${({ theme }) => theme.colors.border};
-    min-width: 320px;
-    width: min(92vw, 420px);
+  display:flex; align-items:center; justify-content:center; padding:20px;
+
+  .container{
+    max-width:420px; width:100%;
+    background:${({theme})=>theme.colors.surface};
+    border:1px solid ${({theme})=>theme.colors.border};
+    border-radius:${({theme})=>theme.radii.md};
+    padding:24px; box-shadow:${({theme})=>theme.shadow};
   }
-  .form:hover {
-    transform: translateY(-2px);
+  header{
+    text-align:center; font-weight:700; font-size:1.2rem;
+    color:${({theme})=>theme.colors.primary};
   }
-  #heading {
-    text-align: center;
-    margin: 0.5em 0 1em;
-    color: #fff;
-    font-size: 1.25em;
+  .form{ margin-top:16px; display:flex; flex-direction:column; gap:16px; }
+
+  .input-box{ width:100%; margin-top:10px; }
+  .input-box label{ font-weight:600; color:${({theme})=>theme.colors.primary}; }
+
+  .form :where(.input-box input){
+    height:38px; width:100%; outline:none; font-size:1rem;
+    color:${({theme})=>theme.colors.primary};
+    margin-top:6px; border:1px solid ${({theme})=>theme.colors.border};
+    border-radius:10px; padding:0 12px; background:#fff;
+    transition:border-color .15s ease, box-shadow .15s ease;
+  }
+  .input-box input::placeholder{ color:${({theme})=>theme.colors.secondary}; opacity:.8; }
+  .input-box input:focus{
+    border-color:${({theme})=>theme.colors.accent};
+    box-shadow:0 0 0 3px rgba(206,122,88,.2);
   }
 
-  .field {
-    display: flex;
-    align-items: center;
-    gap: 0.6em;
-    border-radius: 16px;
-    padding: 0.8em 0.9em;
-    background: ${({ theme }) => theme.colors.surface2};
-    box-shadow: inset 2px 5px 10px rgba(0, 0, 0, 0.35);
+  /* password reveal */
+  .password{ position:relative; }
+  .password input{ padding-right:40px; }
+  .toggle{
+    position:absolute; right:8px; top:50%; transform:translateY(-50%);
+    width:30px; height:30px; border:none; background:transparent; cursor:pointer;
+    color:${({theme})=>theme.colors.secondary}; border-radius:8px;
   }
-  .input-icon {
-    width: 1.3em;
-    height: 1.3em;
-    fill: #fff;
-  }
-  .input-field {
-    flex: 1;
-    background: none;
-    border: none;
-    outline: none;
-    color: #d3d3d3;
-    font-size: 0.95rem;
-  }
-
-  .btn {
-    display: flex;
-    justify-content: center;
-    margin-top: 1.6em;
-  }
-  .button1,
-  .button3 {
-    padding: 0.7em 1.4em;
-    border-radius: 12px;
-    border: 1px solid ${({ theme }) => theme.colors.border};
-    background: #252525;
-    color: #fff;
-    transition: 0.25s;
-  }
-  .button1:hover {
-    background: #000;
-  }
-  .button1:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-  .button3 {
-    background: #252525;
-    margin-top: 0.6em;
-  }
-  .button3:hover {
-    background: ${({ theme }) => theme.colors.danger};
-  }
+  .toggle:hover{ color:${({theme})=>theme.colors.accent}; background:#fff5ef; }
+  .toggle:focus-visible{ outline:3px solid rgba(206,122,88,.35); outline-offset:2px; }
+  .toggle svg{ width:18px; height:18px; display:block; }
 `;
 
-export default LoginForm;
+const eye = (
+  <svg viewBox="0 0 24 24" width="18" height="18">
+    <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z" fill="none" stroke="currentColor" strokeWidth="2"/>
+    <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" strokeWidth="2"/>
+  </svg>
+);
+const eyeOff = (
+  <svg viewBox="0 0 24 24" width="18" height="18">
+    <path d="M3 3l18 18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    <path d="M1 12s4-7 11-7c2.2 0 4.1.6 5.7 1.5M22 12s-4 7-11 7c-2.2 0-4.1-.6-5.7-1.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+  </svg>
+);

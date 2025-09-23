@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import styled from "styled-components";
 import { useI18n } from "@/app/i18n";
+import Button from "@/components/common/buttons/Button";
 
 type Props = {
   onSubmit: (email: string) => void;
@@ -13,60 +14,65 @@ const ForgotForm: React.FC<Props> = ({ onSubmit, loading }) => {
 
   return (
     <StyledWrapper>
-      <form
-        className="form"
-        onSubmit={(e) => {
-          e.preventDefault();
-          onSubmit(email.trim());
-        }}
-      >
-        <p id="heading">{t("resetTitle")}</p>
+      <section className="container">
+        <header>{t("resetTitle")}</header>
 
-        <div className="field">
-          <svg className="input-icon" xmlns="http://www.w3.org/2000/svg" width={16} height={16} viewBox="0 0 24 24" fill="currentColor">
-            <path d="M20 4H4c-1.1 0-2 .9-2 2v1l10 6 10-6V6c0-1.1-.9-2-2-2zm0 5.2l-8 4.8-8-4.8V18c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V9.2z"/>
-          </svg>
-          <input
-            required
-            type="email"
-            placeholder={t("email")}
-            className="input-field"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </div>
+        <form
+          className="form"
+          onSubmit={(e) => { e.preventDefault(); onSubmit(email.trim()); }}
+        >
+          <div className="input-box">
+            <label>{t("email")}</label>
+            <input
+              required
+              type="email"
+              placeholder="Email của bạn"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
 
-        <div className="btn">
-          <button disabled={!!loading} className="button1" type="submit">
+          <Button type="submit" wfull size="md" disabled={!!loading}>
             {t("resetBtn")}
-          </button>
-        </div>
-      </form>
+          </Button>
+        </form>
+      </section>
     </StyledWrapper>
   );
 };
 
-const StyledWrapper = styled.div`
-  .form{
-    display:flex; flex-direction:column; gap:10px;
-    padding: 2em; background:#171717;
-    border-radius:24px; border:1px solid #2c2c2c; box-shadow:0 10px 30px rgba(0,0,0,.35);
-    width:min(92vw, 460px);
-  }
-  #heading{ text-align:center; margin:.5em 0 1em; color:#fff; font-size:1.25em; }
-  .field{
-    display:flex; align-items:center; gap:.6em;
-    border-radius:16px; padding:.8em .9em; background:#1f1f1f;
-    box-shadow: inset 2px 5px 10px rgba(0,0,0,.35);
-  }
-  .input-icon{ width:1.3em; height:1.3em; fill:#fff; }
-  .input-field{
-    flex:1; background:none; border:none; outline:none; color:#d3d3d3; font-size:.95rem;
-  }
-  .btn{ display:flex; justify-content:center; margin-top:1.2em; }
-  .button1{ padding:.7em 1.6em; border-radius:12px; border:1px solid #2c2c2c; background:#252525; color:#fff; transition:.25s; }
-  .button1:hover{ background:#000; }
-  .button1:disabled{ opacity:.6; cursor:not-allowed; }
-`;
-
 export default ForgotForm;
+
+/* ===================== styles (theme light) ===================== */
+const StyledWrapper = styled.div`
+  display:flex; align-items:center; justify-content:center; padding:20px;
+
+  .container{
+    max-width:480px; width:100%;
+    background:${({theme})=>theme.colors.surface};
+    border:1px solid ${({theme})=>theme.colors.border};
+    border-radius:${({theme})=>theme.radii.md};
+    padding:24px; box-shadow:${({theme})=>theme.shadow};
+  }
+  header{
+    text-align:center; font-weight:700; font-size:1.2rem;
+    color:${({theme})=>theme.colors.primary};
+  }
+  .form{ margin-top:16px; display:flex; flex-direction:column; gap:16px;  }
+
+  .input-box{ width:100%; margin-top:10px; }
+  .input-box label{ font-weight:600; color:${({theme})=>theme.colors.primary}; }
+
+  .form :where(.input-box input){
+    height:38px; width:100%; outline:none; font-size:1rem;
+    color:${({theme})=>theme.colors.primary};
+    margin-top:6px; border:1px solid ${({theme})=>theme.colors.border};
+    border-radius:10px; padding:0 12px; background:#fff;
+    transition:border-color .15s ease, box-shadow .15s ease;
+  }
+  .input-box input::placeholder{ color:${({theme})=>theme.colors.secondary}; opacity:.8; }
+  .input-box input:focus{
+    border-color:${({theme})=>theme.colors.accent};
+    box-shadow:0 0 0 3px rgba(206,122,88,.2);
+  }
+`;

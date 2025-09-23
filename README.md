@@ -10,4 +10,4 @@ npm run dev
 ````
 
 
-chưa làm backend, frontend còn 1 số chỗ chưa hoàn chỉnh nha
+chưa làm backend, frontend còn 1 số chỗ chưa hoàn chỉnh

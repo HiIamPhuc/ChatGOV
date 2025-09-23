@@ -6,7 +6,8 @@ export type AppTheme = {
     border: string;
     primary: string;
     secondary: string;
-    accent: string;
+    accent: string;         // dùng cho nút/nhấn mạnh
+    accent2: string;       
     success: string;
     danger: string;
   };
@@ -16,16 +17,17 @@ export type AppTheme = {
 
 export const theme: AppTheme = {
   colors: {
-    bg: "#0f0f10",
-    surface: "#171717",
-    surface2: "#1f1f1f",
-    border: "#2c2c2c",
-    primary: "#eaeaea",
-    secondary: "#a6a6a6",
-    accent: "#6c6c6c",
-    success: "#3ad29f",
-    danger: "#ff4d4d",
+    bg: "#f5f5f5",
+    surface: "#ffffff",
+    surface2: "#f9f9f9",
+    border: "#e6e6e6",
+    primary: "#222222",
+    secondary: "#666666",
+    accent: "#ce7a58",  
+    accent2: "#903938",  
+    success: "#2e7d32",
+    danger:  "#c62828",
   },
   radii: { lg: "24px", md: "14px", sm: "8px" },
-  shadow: "0 10px 30px rgba(0,0,0,.35)",
+  shadow: "0 10px 30px rgba(0,0,0,.10)",
 };
