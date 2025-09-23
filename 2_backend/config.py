@@ -7,10 +7,14 @@ if not os.getenv("GOOGLE_API_KEY"):
     raise ValueError("Please set GOOGLE_API_KEY in environment or .env file.")
 
 if not os.getenv("LANGSMITH_API_KEY") or not os.getenv("LANGSMITH_TRACING"):
-    raise ValueError("Please set LANGSMITH_API_KEY and LANGSMITH_TRACING in environment or .env file.")
+    raise ValueError(
+        "Please set LANGSMITH_API_KEY and LANGSMITH_TRACING in environment or .env file."
+    )
 
 if not os.getenv("SUPABASE_URL") or not os.getenv("SUPABASE_KEY"):
-    raise ValueError("Please set SUPABASE_URL and SUPABASE_KEY in environment or .env file.")
+    raise ValueError(
+        "Please set SUPABASE_URL and SUPABASE_KEY in environment or .env file."
+    )
 
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
