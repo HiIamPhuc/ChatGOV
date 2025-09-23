@@ -1,11 +1,12 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
-from .routers import chat
+from .routers import chat, graph
 # from .config import llm, embeddings  # Ensure initialized; embeddings not used now, but keep for potential future
 
 app = FastAPI()
 
 app.include_router(chat.router)
+app.include_router(graph.router)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
