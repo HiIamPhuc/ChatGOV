@@ -1,7 +1,9 @@
 import os
 from dotenv import load_dotenv
 
-load_dotenv(dotenv_path="D:\\Personal project\\AI_Wrapper-WebPage\\2_backend\\.env")
+load_dotenv(
+    dotenv_path="/home/aaronpham/Coding/AI_thuc_chien/AI_Wrapper-WebPage/2_backend/.env"
+)
 
 if not os.getenv("GOOGLE_API_KEY"):
     raise ValueError("Please set GOOGLE_API_KEY in environment or .env file.")

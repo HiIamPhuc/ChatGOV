@@ -28,18 +28,22 @@ def search_services_by_similarity(
 
         # Format results
         results = []
-        for service in services:
+        for i, service in enumerate(services, 1):
             results.append(
-                f"Title: {service.title}\n"
-                f"Service ID: {service.service_id}\n"
-                f"URL: {service.url}\n"
-                f"Content: {str(service.content)[:200]}..."
+                f"## Thủ tục {i}\n\n"
+                f"**Tên thủ tục:** {service.title}\n\n"
+                f"**Mã thủ tục:** {service.service_id}\n\n"
+                f"**Link:** {service.url}\n\n"
+                f"**Các nội dung:**\n"
+                f"```\n{str(service.content)[:200]}...\n```"
             )
-        # print(results)
-        return f"Found {len(results)} similar services:\n\n" + "\n\n".join(results)
+
+        return f"# Found {len(results)} Similar Services\n\n" + "\n\n---\n\n".join(
+            results
+        )
 
     except Exception as e:
         return f"Error searching services: {str(e)}"
 
 
-# print(search_services_by_similarity("Cấp hộ chiếu"))
+print(search_services_by_similarity("Cấp hộ chiếu"))
