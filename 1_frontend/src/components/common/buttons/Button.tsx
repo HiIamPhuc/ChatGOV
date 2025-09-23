@@ -78,7 +78,7 @@ const Btn = styled.button`
   font-weight: 800;
   color: #fff;
 
-  /* ✅ gradient đồng bộ theo theme */
+  /* gradient đồng bộ theo theme */
   background: linear-gradient(
     90deg,
     ${({ theme }) => theme.colors.accent},
