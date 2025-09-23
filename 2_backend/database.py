@@ -1,11 +1,15 @@
 from typing import List, Optional
 from supabase import create_client, Client
-from .config import SUPABASE_URL, SUPABASE_KEY, SUPABASE_SERVICE_ROLE_KEY
+from .config import SUPABASE_URL, SUPABASE_KEY, SUPABASE_SERVICE_ROLE_KEY, MODE
 from .models import User, Session, Service
 from langchain_core.messages import message_to_dict, messages_from_dict, BaseMessage
 
-# client: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-client: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+if MODE == "dev":
+    client: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+elif MODE == "prod":
+    client: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+else:
+    raise ValueError("Invalid MODE. Choose 'dev' or 'prod'.")
 
 def get_user(user_id: str) -> Optional[User]:
     # Query auth.users table directly
@@ -33,7 +37,8 @@ def serialize_chat_history(history: List[BaseMessage]) -> List[dict]:
     return [message_to_dict(msg) for msg in history]
 
 def deserialize_chat_history(serialized: List[dict]) -> List[BaseMessage]:
-    return [messages_from_dict(d) for d in serialized]
+    # return [messages_from_dict(d) for d in serialized]
+    return messages_from_dict(serialized)
 
 # For services (fuzzy search handled in tools)
 def get_services_with_similarity(query: str, threshold: float = 0.3, limit: int = 5) -> List[Service]:
@@ -41,4 +46,4 @@ def get_services_with_similarity(query: str, threshold: float = 0.3, limit: int 
     response = client.table('services').select(select_query).gt('sim', threshold).order('sim', desc=True).limit(limit).execute()
     return [Service(**item) for item in response.data]
 
-print(get_services_with_similarity('Dang ky ho chieu'))
+# print(get_services_with_similarity('Dang ky ho chieu'))
