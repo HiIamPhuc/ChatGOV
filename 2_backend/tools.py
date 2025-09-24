@@ -40,12 +40,13 @@ def find_available_services(
         results = ["**CÁC DỊCH VỤ CÔNG CÓ SẴN:**\n"]
 
         for i, service in enumerate(services, 1):
-            similarity_percent = round(service.get("similarity_score", 0) * 100, 1)
+            # similarity_percent = round(service.get("similarity_score", 0) * 100, 1)
             results.append(
                 f"{i}. **{service['ten_thu_tuc']}**\n"
                 f"   • ID: `{service['id']}`\n"
                 f"   • Mã thủ tục: `{service['ma_thu_tuc']}`\n"
-                f"   • Độ phù hợp: {similarity_percent}%\n"
+                f"   • URL: `{service['links']}`\n"
+                # f"   • Độ phù hợp: {similarity_percent}%\n"
             )
 
         results.append(
@@ -226,7 +227,7 @@ def format_specific_column_info(
 
 
 """TESTING TOOL SECTIONS """
-print(find_available_services("Cấp hộ chiếu"))
+# print(find_available_services("Cấp hộ chiếu"))
 # print(
 #     get_procedure_information(
 #         "29497",

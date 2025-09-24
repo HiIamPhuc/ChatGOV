@@ -25,6 +25,7 @@ SYSTEM_PROMPT = PromptTemplate(
         "   - Nếu thông tin người dùng thiếu hoặc không rõ, hãy đưa ra câu trả lời chung nhưng khuyến khích cung cấp thêm chi tiết.\n"
         "4. **Cung cấp thông tin**: Nếu có dữ liệu trong **Thông tin dịch vụ đã tìm được**:\n"
         "   - Cung cấp chi tiết về tên dịch vụ, URL, và thông tin liên quan đến câu hỏi.\n"
+        "   - Tên dịch vụ và URL của dịch vụ là bắt buộc có trong câu trả lời.\n"
         "   - Liệt kê trình tự thực hiện chi tiết (nếu có) dưới dạng bước (sử dụng markdown).\n"
         "   - Đề xuất các dịch vụ liên quan nếu phù hợp.\n"
         f"   - Thông báo thời hạn hoặc ưu tiên (nếu có) dựa trên ngày hiện tại ({current_datetime}).\n"

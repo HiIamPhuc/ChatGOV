@@ -4,7 +4,7 @@ from langgraph.prebuilt import tools_condition, ToolNode
 from langchain_core.messages import SystemMessage
 from langchain.chat_models import init_chat_model
 from .config import GEMINI_MODEL
-from .tools import search_services_by_similarity
+from .tools import find_available_services, get_procedure_information
 from .prompts import SYSTEM_PROMPT
 
 class ChatState(MessagesState):
@@ -15,14 +15,15 @@ llm = init_chat_model(GEMINI_MODEL, model_provider="google_genai")
 def query_or_respond(state: ChatState):
     # Add system message at the start of conversation
     messages = [SystemMessage(content=SYSTEM_PROMPT.invoke(
-        {"docs_content": "", "user_profile": ""}
+        {"docs_content": "", "user_profile": state.get("user_profile", {})}
     ).to_string())] + state["messages"]
     
-    llm_with_tools = llm.bind_tools([search_services_by_similarity])
+    # Bind both tools for service search and information retrieval
+    llm_with_tools = llm.bind_tools([find_available_services, get_procedure_information])
     response = llm_with_tools.invoke(messages)
-    return {"messages": [response]}
+    return {"messages": [response], "user_profile": state.get("user_profile", {})}
 
-tools_node = ToolNode([search_services_by_similarity])
+tools_node = ToolNode([find_available_services, get_procedure_information])
 
 def generate(state: ChatState):
     recent_tool_messages = []
@@ -32,15 +33,16 @@ def generate(state: ChatState):
         else:
             break
     tool_messages = recent_tool_messages[::-1]
+    
+    # Combine all tool outputs, they might include both service listings and detailed information
     docs_content = "\n\n".join(doc.content for doc in tool_messages) if tool_messages else ""
 
     system_message_content = (
         SYSTEM_PROMPT.invoke({
-            "docs_content": docs_content if docs_content.strip() or any("tool" in msg.type for msg in state["messages"]) else "",
-            "user_profile": state['user_profile']
+            "docs_content": docs_content if docs_content.strip() else "",
+            "user_profile": state.get("user_profile", {})
         }).to_string() 
     )
-    print(system_message_content)
 
     conversation_messages = [
         msg
