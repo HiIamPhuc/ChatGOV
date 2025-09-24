@@ -53,7 +53,7 @@ export default function SessionItem({
     };
   }, []);
 
-  // tính vị trí menu dựa trên nút 3 chấm
+  // tính vị trí menu
   useEffect(() => {
     if (!open) return;
     const calc = () => {
@@ -62,12 +62,9 @@ export default function SessionItem({
       setPos({ top: Math.round(b.bottom + 6), left: Math.round(b.right) });
     };
     calc();
-    const ro = new ResizeObserver(calc);
-    if (rowBtnRef.current) ro.observe(rowBtnRef.current);
     window.addEventListener("scroll", calc, true);
     window.addEventListener("resize", calc);
     return () => {
-      ro.disconnect();
       window.removeEventListener("scroll", calc, true);
       window.removeEventListener("resize", calc);
     };
@@ -78,14 +75,12 @@ export default function SessionItem({
       data-session-menu
       style={{ top: (pos?.top ?? 0) + "px", left: (pos?.left ?? 0) + "px" }}
       onClick={(e) => e.stopPropagation()}
+      role="menu"
     >
       <button className="item" onClick={onRename} role="menuitem">
         <span className="ic" aria-hidden>
           <svg width="16" height="16" viewBox="0 0 24 24">
-            <path
-              d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z"
-              fill="currentColor"
-            />
+            <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z" fill="currentColor" />
           </svg>
         </span>
         <span>{t("rename") || "Rename"}</span>
@@ -94,10 +89,7 @@ export default function SessionItem({
       <button className="item danger" onClick={onDelete} role="menuitem">
         <span className="ic" aria-hidden>
           <svg width="16" height="16" viewBox="0 0 24 24">
-            <path
-              d="M6 7h12l-1 12a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L6 7zm3-4h6l1 2h3a1 1 0 1 1 0 2H5a1 1 0 1 1 0-2h3l1-2z"
-              fill="currentColor"
-            />
+            <path d="M6 7h12l-1 12a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L6 7zm3-4h6l1 2h3a1 1 0 1 1 0 2H5a1 1 0 1 1 0-2h3l1-2z" fill="currentColor" />
           </svg>
         </span>
         <span>{t("delete") || "Delete"}</span>
@@ -107,22 +99,18 @@ export default function SessionItem({
 
   return (
     <Row $active={!!active}>
-      {/* CẢ KHỐI là 1 button */}
       <button
         ref={rowBtnRef}
         className="rowBtn"
         title={title}
         onClick={onClick}
-        data-active={active ? "true" : "false"}
       >
+        <span className="accent" aria-hidden />
         <span className="tx">{title}</span>
-
-        {/* Nút 3 chấm nằm trong khối, nhưng stopPropagation để không kích hoạt onClick của khối */}
         <button
           ref={dotsRef}
           className="dots"
           aria-label={t("more") || "More"}
-          title={t("more") || "More"}
           onClick={(e) => {
             e.stopPropagation();
             setOpen((v) => !v);
@@ -144,55 +132,74 @@ export default function SessionItem({
 /* ============ styles ============ */
 const Row = styled.div<{ $active: boolean }>`
   .rowBtn {
+    --r: 10px;
     width: 100%;
     display: grid;
-    grid-template-columns: 1fr auto;
+    grid-template-columns: 4px 1fr auto;
     align-items: center;
-    text-align: left;
-    gap: 8px;
-    padding: 8px 6px 8px 10px;
-    border: none;
-    background: transparent;
-    border-radius: 8px;
-    color: ${({ theme }) => theme.colors.primary};
+    gap: 10px;
+    padding: 8px 10px;
+    border: 1px solid transparent;
+    background: rgba(255,255,255,0.6);
+    border-radius: var(--r);
+    color: ${({ theme }) => theme.colors.accent2};
     cursor: pointer;
-    transition: background 0.15s ease, box-shadow 0.15s ease,
-      border-color 0.15s ease;
+    transition: background .18s ease, box-shadow .18s ease, border-color .18s ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
   }
+
+  .accent {
+    height: 100%;
+    border-radius: var(--r) 0 0 var(--r);
+    background: linear-gradient(180deg, ${({ theme }) => theme.colors.accent} 0%, ${({ theme }) => theme.colors.accent2} 100%);
+    opacity: 0;
+    transition: opacity .18s ease;
+  }
+
   .tx {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    font-size: 0.92rem;
+    font-size: .95rem;
     font-weight: 600;
+    text-align: left;
   }
 
-  /* Hover & Active phủ khối */
   .rowBtn:hover {
-    background: rgba(255, 255, 255, 0.6);
+    background: rgba(255,255,255,0.9);
+    box-shadow: 0 4px 14px rgba(0,0,0,.08);
   }
-  ${({ $active }) => $active && `.rowBtn{ background: rgba(255,255,255,.80); }`}
+  .rowBtn:hover .accent { opacity: .4; }
 
-  /* Focus khối */
+  ${({ $active, theme }) =>
+    $active &&
+    `.rowBtn {
+        background: #fff;
+        border-color: ${theme.colors.border};
+        box-shadow: 0 6px 16px rgba(0,0,0,.1);
+      }
+      .accent { opacity: .9; }
+    `}
+
   .rowBtn:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 2px rgba(206, 122, 88, 0.28);
+    box-shadow: 0 0 0 2px rgba(206,122,88,.28);
   }
 
-  /* Nút 3 chấm trong khối – trong suốt, chỉ để bắt click */
-  .dots {
-    display: grid;
+   .dots {
+    display: grid; 
     place-items: center;
-    width: 28px;
+    width: 28px; 
     height: 28px;
-    border: 1px solid transparent;
-    background: transparent;
-    border-radius: 8px;
+    border: none;             
+    background: transparent;  
+    border-radius: 6px;
     color: ${({ theme }) => theme.colors.secondary};
     cursor: pointer;
-    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    transition: background .15s ease, color .15s ease;
   }
-  .rowBtn:hover .dots {
+  .dots:hover {
+    background: rgba(0,0,0,0.06); 
     color: ${({ theme }) => theme.colors.accent};
   }
 `;
@@ -205,7 +212,7 @@ const MenuWrap = styled.div`
   background: #fff;
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 12px;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 12px 30px rgba(0,0,0,.12);
   padding: 6px;
 
   .item {
