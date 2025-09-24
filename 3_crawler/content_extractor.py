@@ -5,7 +5,7 @@ from config import BASE_URL
 
 
 def extract_structured_content(detail_elem):
-    """Extract structured content from tthc-list-item-detail"""
+    """Extract clean content optimized for QA chatbot - remove unnecessary tags but keep table structure"""
     if not detail_elem:
         return ""
 
@@ -36,14 +36,15 @@ def extract_structured_content(detail_elem):
         if element.name in ["h1", "h2", "h3", "h4", "h5", "h6"]:
             heading_text = element.get_text(strip=True)
             if heading_text and not is_duplicate_content(heading_text):
-                tag_name = element.name.upper()
-                content_parts.append(f"{tag_name}: {heading_text}")
+                # Remove tag prefix, just add colon for structure
+                content_parts.append(f"{heading_text}:")
                 processed_texts.add(heading_text)
 
         elif element.name == "p":
             p_text = element.get_text(strip=True)
             if p_text and not is_duplicate_content(p_text):
-                content_parts.append(f"P: {p_text}")
+                # Remove "P:" prefix, just add the text
+                content_parts.append(p_text)
                 processed_texts.add(p_text)
 
         elif element.name == "ul":
@@ -52,11 +53,11 @@ def extract_structured_content(detail_elem):
             for li in element.find_all("li"):
                 li_text = li.get_text(strip=True)
                 if li_text:
-                    ul_items.append(f"  - {li_text}")
+                    ul_items.append(f"• {li_text}")  # Use bullet point instead of "- "
                     ul_content += li_text + " "
 
             if ul_items and not is_duplicate_content(ul_content):
-                content_parts.append("UL:")
+                # Remove "UL:" prefix, just add items
                 content_parts.extend(ul_items)
                 processed_texts.add(ul_content)
 
@@ -66,11 +67,11 @@ def extract_structured_content(detail_elem):
             for j, li in enumerate(element.find_all("li")):
                 li_text = li.get_text(strip=True)
                 if li_text:
-                    ol_items.append(f"  {j+1}. {li_text}")
+                    ol_items.append(f"{j+1}. {li_text}")
                     ol_content += li_text + " "
 
             if ol_items and not is_duplicate_content(ol_content):
-                content_parts.append("OL:")
+                # Remove "OL:" prefix, just add numbered items
                 content_parts.extend(ol_items)
                 processed_texts.add(ol_content)
 
@@ -88,9 +89,9 @@ def extract_structured_content(detail_elem):
                     break
                 prev_sibling = prev_sibling.find_previous_sibling()
 
-            # Extract table content
-            table_content = extract_table_content(element, table_context)
-            if table_content and not is_duplicate_content(table_content):
+            # Extract table content - KEEP STRUCTURE but make it more natural
+            table_content = extract_table_content_natural(element, table_context)
+            if table_content and not is_duplicate_content(" ".join(table_content)):
                 content_parts.extend(table_content)
                 processed_texts.add(" ".join(table_content))
 
@@ -98,31 +99,28 @@ def extract_structured_content(detail_elem):
     if not content_parts:
         plain_text = detail_elem.get_text(strip=True)
         if plain_text:
-            content_parts.append(f"TEXT: {plain_text}")
+            content_parts.append(plain_text)
 
-    return "\n".join(content_parts)
+    return "\n\n".join(content_parts)  # Use double newlines for better readability
 
 
-def extract_table_content(table, context=""):
-    """Extract content from a table element"""
+def extract_table_content_natural(table, context=""):
+    """Extract table content in natural, readable format while preserving structure"""
     table_parts = []
 
-    # Table header with context
-    table_header = "TABLE:"
+    # Add context as natural heading if available
     if context:
-        table_header += f" ({context})"
-    table_parts.append(table_header)
+        table_parts.append(f"{context}:")
 
     # Extract table headers
     thead = table.find("thead")
+    headers = []
     if thead:
         header_row = thead.find("tr")
         if header_row:
             headers = [
                 th.get_text(strip=True) for th in header_row.find_all(["th", "td"])
             ]
-            if headers:
-                table_parts.append(f"  Headers: {' | '.join(headers)}")
 
     # Extract table body
     tbody = table.find("tbody") or table
@@ -132,8 +130,6 @@ def extract_table_content(table, context=""):
         # Skip header row if no thead
         if not thead and j == 0:
             headers = [th.get_text(strip=True) for th in row.find_all(["th", "td"])]
-            if any(header for header in headers):
-                table_parts.append(f"  Headers: {' | '.join(headers)}")
             continue
 
         cells = []
@@ -150,19 +146,30 @@ def extract_table_content(table, context=""):
                     if span.get_text(strip=True)
                 ]
                 if span_texts:
-                    cell_text = " | ".join(span_texts)
+                    cell_text = ", ".join(span_texts)  # Use comma instead of pipe
 
             # If no spans, get regular text but handle <br> tags
             if not cell_text:
-                # Replace <br> with " | " for better readability
+                # Replace <br> with comma for better readability
                 for br in cell.find_all("br"):
-                    br.replace_with(" | ")
+                    br.replace_with(", ")
                 cell_text = cell.get_text(" ", strip=True)
 
             cells.append(cell_text)
 
-        if any(cell for cell in cells):
-            table_parts.append(f"  Row{j}: {' | '.join(cells)}")
+        # Format row in natural language
+        if any(cell for cell in cells) and headers and len(headers) == len(cells):
+            # Create natural description of the row
+            row_descriptions = []
+            for header, cell in zip(headers, cells):
+                if cell and cell.strip():
+                    row_descriptions.append(f"{header}: {cell}")
+
+            if row_descriptions:
+                table_parts.append(" | ".join(row_descriptions))
+        elif any(cell for cell in cells):
+            # Fallback to simple cell joining if no proper headers
+            table_parts.append(" | ".join([cell for cell in cells if cell.strip()]))
 
     return table_parts
 
