@@ -1,6 +1,6 @@
 import { useState } from "react";
 import styled from "styled-components";
-import { supabase } from "@/app/supabaseClient";
+import { login } from "@/services/auth";
 import LoginForm from "@/components/forms/LoginForm";
 import { Link, useNavigate } from "react-router-dom";
 import LoaderPage from "@/components/common/loaders/LoaderPage";
@@ -18,17 +18,15 @@ export default function SignIn() {
 
   const submit = async (email: string, password: string) => {
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    setLoading(false);
-    if (error) {
-      notify({ title: t("error"), content: error.message, tone: "error" });
-      return;
+    try {
+      await login(email, password);
+      notify({ title: t("signinSuccess"), tone: "success" });
+      nav("/app");
+    } catch (e: any) {
+      notify({ title: t("error"), content: e?.response?.data?.detail || e?.message, tone: "error" });
+    } finally {
+      setLoading(false);
     }
-    notify({ title: t("signinSuccess"), tone: "success" });
-    nav("/app");
   };
 
   return (
@@ -41,14 +39,10 @@ export default function SignIn() {
           <div className="links">
             <div className="row">
               <span className="muted">{t("needAccount")}</span>
-              <Link to="/signup" className="cta">
-                {t("signup")}
-              </Link>
+              <Link to="/signup" className="cta">{t("signup")}</Link>
             </div>
             <div className="row">
-              <Link to="/forgot" className="cta">
-                {t("forgot")}
-              </Link>
+              <Link to="/forgot" className="cta">{t("forgot")}</Link>
             </div>
           </div>
         </div>

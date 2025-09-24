@@ -1,6 +1,6 @@
 import { useState } from "react";
 import styled from "styled-components";
-import { supabase } from "@/app/supabaseClient";
+import { register } from "@/services/auth"; 
 import SignupForm from "@/components/forms/SignupForm";
 import { Link, useNavigate } from "react-router-dom";
 import LoaderPage from "@/components/common/loaders/LoaderPage";
@@ -16,28 +16,17 @@ export default function SignUp() {
   const { notify } = useToast();
   const { t } = useI18n();
 
-  const submit = async ({
-    email,
-    password,
-    fullName,
-  }: {
-    email: string;
-    password: string;
-    fullName: string;
-  }) => {
+  const submit = async ({ email, password, fullName }: { email: string; password: string; fullName: string; }) => {
     setLoading(true);
-    const { error, data } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { fullName } },
-    });
-    setLoading(false);
-    if (error) {
-      notify({ title: t("error"), content: error.message, tone: "error" });
-      return;
+    try {
+      await register(email, password, fullName);
+      notify({ title: t("signupVerify"), tone: "success" });
+      nav("/signin");
+    } catch (e: any) {
+      notify({ title: t("error"), content: e?.response?.data?.detail || e?.message, tone: "error" });
+    } finally {
+      setLoading(false);
     }
-    notify({ title: t("signupVerify"), tone: "success" });
-    if (data.user) nav("/signin");
   };
 
   return (

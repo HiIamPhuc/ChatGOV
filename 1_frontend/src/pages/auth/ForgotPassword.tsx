@@ -1,7 +1,7 @@
 import { useState } from "react";
 import styled from "styled-components";
 import LoaderPage from "@/components/common/loaders/LoaderPage";
-import { supabase } from "@/app/supabaseClient";
+import { forgotPassword } from "@/services/auth";
 import { useToast } from "@/app/toast";
 import { useI18n } from "@/app/i18n";
 import ForgotForm from "@/components/forms/ForgotPasswordForm";
@@ -16,18 +16,14 @@ export default function ForgotPage() {
 
   const submit = async (email: string) => {
     setLoading(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo:
-        typeof window !== "undefined"
-          ? `${window.location.origin}/reset`
-          : undefined,
-    });
-    setLoading(false);
-    if (error) {
-      notify({ title: t("error"), content: error.message, tone: "error" });
-      return;
+    try {
+      await forgotPassword(email); // backend gọi Supabase resetPasswordEmail
+      notify({ title: t("resetSent"), tone: "success" });
+    } catch (e: any) {
+      notify({ title: t("error"), content: e?.response?.data?.detail || e?.message, tone: "error" });
+    } finally {
+      setLoading(false);
     }
-    notify({ title: t("resetSent"), tone: "success" });
   };
 
   return (

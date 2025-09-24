@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import styled from "styled-components";
-import { supabase } from "@/app/supabaseClient";
+import { resetPasswordWithRecoveryToken } from "@/services/auth";
 import { useToast } from "@/app/toast";
 import { useI18n } from "@/app/i18n";
 import LoaderPage from "@/components/common/loaders/LoaderPage";
@@ -8,7 +8,7 @@ import { useNavigate } from "react-router-dom";
 import Button from "@/components/common/buttons/Button";
 import PwField from "@/components/common/inputs/PwField";
 
-// Dùng chung background với Forgot
+// ảnh trong /public
 const bg = "/forgot-reset-bg.jpg";
 
 export default function ResetPassword() {
@@ -20,64 +20,59 @@ export default function ResetPassword() {
   const [loading, setLoading] = useState(false);
   const [pw, setPw] = useState("");
   const [pw2, setPw2] = useState("");
+  const [recoveryToken, setRecoveryToken] = useState<string>("");
 
   useEffect(() => {
-    if (
-      typeof window !== "undefined" &&
-      window.location.hash.includes("type=recovery")
-    ) {
+    const url = new URL(window.location.href);
+    const hashParams = new URLSearchParams((window.location.hash || "").replace(/^#/, ""));
+    const qParams = url.searchParams;
+
+    const type =
+      (hashParams.get("type") || qParams.get("type") || "").toLowerCase();
+    const token =
+      hashParams.get("access_token") || qParams.get("access_token") || "";
+
+    if (type === "recovery" && token) {
+      setRecoveryToken(token);
       setReady(true);
+      return;
     }
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN")
-        setReady(true);
+
+    // Không có token hợp lệ -> quay về /signin
+    notify({
+      title: t("error"),
+      content: t("missingOrInvalidResetToken") || "Missing or invalid reset token",
+      tone: "error",
     });
-    return () => subscription.unsubscribe();
-  }, []);
+    nav("/signin");
+  }, [nav, notify, t]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (pw.length < 8) {
-      notify({
-        title: t("error"),
-        content: t("passwordTooShort"),
-        tone: "error",
-      });
+      notify({ title: t("error"), content: t("passwordTooShort"), tone: "error" });
       return;
     }
     if (pw !== pw2) {
-      notify({
-        title: t("error"),
-        content: t("confirmPassword"),
-        tone: "error",
-      });
+      notify({ title: t("error"), content: t("confirmPassword"), tone: "error" });
       return;
     }
+
     try {
       setLoading(true);
-      const { error } = await supabase.auth.updateUser({ password: pw });
-      setLoading(false);
-      if (error) {
-        notify({ title: t("error"), content: error.message, tone: "error" });
-        return;
-      }
+      await resetPasswordWithRecoveryToken(recoveryToken, pw);
+      // Dọn URL
+      window.history.replaceState({}, document.title, window.location.pathname);
       notify({ title: t("passwordUpdated"), tone: "success" });
-      if (typeof window !== "undefined")
-        window.history.replaceState(
-          {},
-          document.title,
-          window.location.pathname
-        );
       nav("/signin");
     } catch (err: any) {
-      setLoading(false);
       notify({
         title: t("error"),
-        content: err?.message || "Update password failed",
+        content: err?.response?.data?.detail || err?.message || "Update password failed",
         tone: "error",
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -93,20 +88,8 @@ export default function ResetPassword() {
       <section className="container">
         <header>{t("setNewPassword")}</header>
         <form className="form" onSubmit={submit}>
-          <PwField
-            label={t("newPassword")}
-            value={pw}
-            onChange={setPw}
-            autoComplete="new-password"
-            required
-          />
-          <PwField
-            label={t("confirmPassword")}
-            value={pw2}
-            onChange={setPw2}
-            autoComplete="new-password"
-            required
-          />
+          <PwField label={t("newPassword")} value={pw} onChange={setPw} autoComplete="new-password" required />
+          <PwField label={t("confirmPassword")} value={pw2} onChange={setPw2} autoComplete="new-password" required />
           <Button type="submit" wfull size="md" disabled={loading}>
             {t("updatePassword")}
           </Button>
