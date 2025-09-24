@@ -65,10 +65,8 @@ const DICTS: Record<Lang, Dict> = {
     edit: "Edit",
     save: "Save",
     cancel: "Cancel",
-    citizenId: "Citizen ID (CCCD)",
     age: "Age",
     city: "City / District",
-    province: "Province",
     phone: "Phone",
     dob: "Date of birth",
     changePassword: "Change password",
@@ -79,6 +77,26 @@ const DICTS: Record<Lang, Dict> = {
     passwordNotMatch: "New password confirmation does not match.",
     passwordUpdateFailed: "Failed to update password.",
 
+    // Used by Profile validations / toasts
+    requireName: "Please enter your full name.",
+    requireAge: "Please enter your age.",
+    requireCity: "Please enter your city/district.",
+    ageInteger: "Age must be an integer.",
+    ageRange: `Age must be between ${14}–${100}.`,
+    dobInvalid: "Invalid date of birth.",
+    dobFuture: "Date of birth cannot be in the future.",
+    ageDobMismatch: "Age does not match date of birth.",
+    noChanges: "No changes to save.",
+    saved: "Saved.",
+
+    // DateField
+    invalidDateLead: "Please enter a valid date in",
+    pickDate: "Pick a date",
+
+    // Password helpers
+    fillAllPw: "Please fill in all password fields.",
+    newPwSameAsCurrent: "New password must be different from the current password.",
+
     // Toast / statuses
     signupVerify: "Sign-up success. Verification email sent.",
     signinSuccess: "Sign-in success.",
@@ -86,8 +104,8 @@ const DICTS: Record<Lang, Dict> = {
 
     // Disclaimer
     chatDisclaimer: "ChatGOV can make mistakes. Check important info.",
-    
   },
+
   vi: {
     appTitle: "ChatGOV",
 
@@ -123,7 +141,6 @@ const DICTS: Record<Lang, Dict> = {
     more: "Thêm tuỳ chọn",
     rename: "Đổi tên",
     delete: "Xoá",
-    
 
     // App
     addLink: "Thêm link website",
@@ -160,6 +177,26 @@ const DICTS: Record<Lang, Dict> = {
     updating: "Đang cập nhật...",
     passwordNotMatch: "Xác nhận mật khẩu mới không khớp.",
     passwordUpdateFailed: "Cập nhật mật khẩu không thành công.",
+
+    // Used by Profile validations / toasts
+    requireName: "Vui lòng nhập Họ và tên.",
+    requireAge: "Vui lòng nhập Tuổi.",
+    requireCity: "Vui lòng nhập Nơi sống (Quận/Huyện).",
+    ageInteger: "Tuổi phải là số nguyên.",
+    ageRange: `Độ tuổi phải từ ${14}–${100}.`,
+    dobInvalid: "Ngày sinh không hợp lệ.",
+    dobFuture: "Ngày sinh không được lớn hơn hiện tại.",
+    ageDobMismatch: "Tuổi không khớp với ngày sinh.",
+    noChanges: "Không có thay đổi nào.",
+    saved: "Đã lưu.",
+
+    // DateField
+    invalidDateLead: "Vui lòng nhập ngày theo định dạng",
+    pickDate: "Chọn ngày",
+
+    // Password helpers
+    fillAllPw: "Vui lòng điền đầy đủ các ô mật khẩu.",
+    newPwSameAsCurrent: "Mật khẩu mới phải khác mật khẩu hiện tại.",
 
     // Toast / statuses
     signupVerify: "Đăng ký thành công. Đã gửi email xác nhận.",
