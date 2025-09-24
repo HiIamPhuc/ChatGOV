@@ -1,12 +1,10 @@
 import styled from "styled-components";
 import { useI18n } from "@/app/i18n";
-import { supabase } from "@/app/supabaseClient";
+import { logout as apiLogout } from "@/services/auth";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useToast } from "@/app/toast";
 import React from "react";
-import SessionList, {
-  type Session,
-} from "@/components/common/chat/SessionList";
+import SessionList, { type Session } from "@/components/common/chat/SessionList";
 
 type Props = { collapsed: boolean; onToggle: () => void };
 
@@ -20,10 +18,18 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
   const { pathname } = useLocation();
   const { notify } = useToast();
 
-  const logout = async () => {
-    await supabase.auth.signOut();
-    notify({ title: t("signin"), content: t("signedOut"), tone: "info" });
-    nav("/signin");
+  const handleLogout = async () => {
+    try {
+      await apiLogout();
+      notify({ title: t("signin"), content: t("signedOut"), tone: "info" });
+      nav("/signin");
+    } catch (e: any) {
+      notify({
+        title: t("error"),
+        content: e?.response?.data?.detail || e?.message,
+        tone: "error",
+      });
+    }
   };
   const go = (to: string) => () => nav(to);
 
@@ -73,7 +79,7 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
           </QuickBtn>
         </div>
 
-        {/* Chats block (chỉ khối này chiếm phần còn lại và có scroll) */}
+        {/* Chats block */}
         <div className="sessionsWrap">
           <div className="sectionTitle">{t("chats")}</div>
           <div className="sessionsArea">
@@ -105,7 +111,7 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
           <SvgSettings className="icon" />
           <span className="label">{t("settings")}</span>
         </NavBtn>
-        <NavBtn onClick={logout} title={t("logout")}>
+        <NavBtn onClick={handleLogout} title={t("logout")}>
           <SvgLogout className="icon" />
           <span className="label">{t("logout")}</span>
         </NavBtn>
@@ -206,26 +212,15 @@ const Wrap = styled.aside<{ $bg: string }>`
       position: absolute;
       right: 10px;
     }
-    .logo {
-      opacity: 1;
-    }
-    .head:hover .toggle {
-      opacity: 1;
-      pointer-events: auto;
-    }
-    .head:hover .logo {
-      opacity: 0;
-    }
+    .logo { opacity: 1; }
+    .head:hover .toggle { opacity: 1; pointer-events: auto; }
+    .head:hover .logo { opacity: 0; }
 
-    .sessionsWrap {
-      display: none;
-    } /* ẩn khối chats khi thu gọn */
-    .label {
-      display: none;
-    }
+    .sessionsWrap { display: none; } /* ẩn khối chats khi thu gọn */
+    .label { display: none; }
   }
 
-  /* Body không scroll; chia grid để phần sessions chiếm 1fr */
+  /* Body */
   .body {
     z-index: 1;
     min-height: 0;
@@ -249,9 +244,7 @@ const Wrap = styled.aside<{ $bg: string }>`
     border-top: 1px solid var(--sep);
     min-height: 0;
   }
-  .sessionsArea {
-    min-height: 0;
-  } /* cho phép con scroll  */
+  .sessionsArea { min-height: 0; } /* cho phép con scroll  */
   .sectionTitle {
     font-size: 0.99rem;
     font-weight: 1000;
@@ -301,15 +294,11 @@ const QuickBtn = styled.button`
     border-color: #f0d2c5;
     transform: translateY(-1px);
   }
-  [data-collapsed="true"] & {
-    justify-content: center;
-  }
-  [data-collapsed="true"] & .qlabel {
-    display: none;
-  }
+  [data-collapsed="true"] & { justify-content: center; }
+  [data-collapsed="true"] & .qlabel { display: none; }
 `;
 
-/* Footer buttons (giữ nguyên size) */
+/* Footer buttons – gradient border khớp với fill */
 const NavBtn = styled.button`
   --r: 999px;
   display: flex;
@@ -328,30 +317,41 @@ const NavBtn = styled.button`
   .icon {
     width: 22px;
     height: 22px;
-    color: ${({ theme }) => theme.colors.accent};
+    color: ${({ theme }) => theme.colors.accent2};
     transition: color 0.2s;
   }
+
   &:hover {
     background: rgba(255, 255, 255, 0.98);
     box-shadow: inset 0 1px 0 rgba(0, 0, 0, 0.03);
     border-color: #f0d2c5;
   }
+
+  /* ACTIVE / FOCUS: cùng 1 hướng gradient cho CẢ border và fill */
   &:focus-visible,
   &[data-active="true"] {
     outline: none;
-    background: linear-gradient(
-      90deg,
-      ${({ theme }) => theme.colors.accent},
-      ${({ theme }) => theme.colors.accent2}
-    );
+    border: 1px solid transparent;
+    background:
+      linear-gradient(
+        90deg,
+        ${({ theme }) => theme.colors.accent},
+        ${({ theme }) => theme.colors.accent2}
+      ) padding-box,
+      linear-gradient(
+        90deg,
+        ${({ theme }) => theme.colors.accent},
+        ${({ theme }) => theme.colors.accent2}
+      ) border-box;
+    background-clip: padding-box, border-box;
     color: #fff;
-    border-color: transparent;
     box-shadow: 0 4px 18px rgba(206, 122, 88, 0.35);
   }
   &:focus-visible .icon,
   &[data-active="true"] .icon {
     color: #fff;
   }
+
   [data-collapsed="true"] & {
     justify-content: center;
     padding: 10px 0;
@@ -362,33 +362,14 @@ const NavBtn = styled.button`
 /* SVGs */
 const SvgTwoPanes = (p: React.SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" {...p}>
-    <rect
-      x="3"
-      y="5"
-      width="8"
-      height="14"
-      rx="2"
-      stroke="currentColor"
-      strokeWidth="2"
-    />
-    <rect
-      x="13"
-      y="5"
-      width="8"
-      height="14"
-      rx="2"
-      stroke="currentColor"
-      strokeWidth="2"
-    />
+    <rect x="3" y="5" width="8" height="14" rx="2" stroke="currentColor" strokeWidth="2" />
+    <rect x="13" y="5" width="8" height="14" rx="2" stroke="currentColor" strokeWidth="2" />
   </svg>
 );
 const SvgPen = (p: React.SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" {...p}>
     <path d="M12 20h9" strokeWidth="2" />
-    <path
-      d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"
-      strokeWidth="2"
-    />
+    <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" strokeWidth="2" />
   </svg>
 );
 const SvgSearch = (p: React.SVGProps<SVGSVGElement>) => (
@@ -406,19 +387,12 @@ const SvgUser = (p: React.SVGProps<SVGSVGElement>) => (
 const SvgSettings = (p: React.SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" {...p}>
     <path d="M12 8a4 4 0 1 1-4 4 4 4 0 0 1 4-4Z" strokeWidth="2" />
-    <path
-      d="M2 12h3m14 0h3M12 2v3m0 14v3M4.2 4.2l2.1 2.1m11.4 11.4 2.1 2.1M4.2 19.8l2.1-2.1m11.4-11.4 2.1-2.1"
-      strokeWidth="2"
-    />
+    <path d="M2 12h3m14 0h3M12 2v3m0 14v3M4.2 4.2l2.1 2.1m11.4 11.4 2.1 2.1M4.2 19.8l2.1-2.1m11.4-11.4 2.1-2.1" strokeWidth="2" />
   </svg>
 );
 const SvgLogout = (p: React.SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" {...p}>
-    <path
-      d="M10 7V4a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2h-6a2 2 0 0 1-2-2v-3"
-      stroke="currentColor"
-      strokeWidth="2"
-    />
+    <path d="M10 7V4a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2h-6a2 2 0 0 1-2-2v-3" stroke="currentColor" strokeWidth="2" />
     <path d="M15 12H3m4-4-4 4 4 4" stroke="currentColor" strokeWidth="2" />
   </svg>
 );
