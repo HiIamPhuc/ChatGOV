@@ -17,7 +17,10 @@ def get_user(user_id: str) -> Optional[User]:
     response = client.auth.admin.get_user_by_id(user_id)
     if response.user:
         return User(
-            id=response.user.id, email=response.user.email, phone=response.user.phone
+            id=response.user.id, 
+            email=response.user.email, 
+            phone=response.user.phone
+            # ADD MORE FIELDS
         )
     return None
 

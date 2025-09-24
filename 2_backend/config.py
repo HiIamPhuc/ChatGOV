@@ -22,3 +22,4 @@ SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 
 WEBSITE_NAME = "Cổng Dịch vụ công Quốc gia"
+WEBSITE_URL = "https://dichvucong.gov.vn"

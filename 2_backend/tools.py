@@ -44,6 +44,3 @@ def search_services_by_similarity(
 
     except Exception as e:
         return f"Error searching services: {str(e)}"
-
-
-# print(search_services_by_similarity("Cấp hộ chiếu"))

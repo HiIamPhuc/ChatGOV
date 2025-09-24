@@ -1,9 +1,7 @@
 import csv
 from supabase import create_client, Client
-from ..config import SUPABASE_URL, SUPABASE_KEY
-
-# app/utils/url_parser.py
 from urllib.parse import urlparse, parse_qs
+from ..config import SUPABASE_URL, SUPABASE_KEY
 
 # Run this script once to load CSV into Supabase
 # Usage: python -m app.utils.load_csv path_to_csv.csv
