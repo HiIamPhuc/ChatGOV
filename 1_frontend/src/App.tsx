@@ -9,7 +9,11 @@ import ChatPage from "@/pages/ChatPage";
 import Profile from "@/pages/Profile";
 import SettingsPage from "@/pages/Settings";
 
+import useSupabaseRedirect from "@/hooks/useSupabaseRedirect";
+
 export default function App() {
+  useSupabaseRedirect(); // custom hook để handle Supabase redirect (signup, recovery)
+  
   return (
     <Routes>
       {/* ===== Auth (KHÔNG sidebar) ===== */}
