@@ -1,18 +1,22 @@
+from typing import Annotated
 from langgraph.graph import StateGraph, END, MessagesState
 from langgraph.prebuilt import tools_condition, ToolNode
 from langchain_core.messages import SystemMessage
 from langchain.chat_models import init_chat_model
-from .config import WEBSITE_NAME, GEMINI_MODEL
+from .config import GEMINI_MODEL
 from .tools import search_services_by_similarity
+from .prompts import SYSTEM_PROMPT
 
+class ChatState(MessagesState):
+    user_profile: Annotated[dict, "Contain user profile"] = {}
 
 llm = init_chat_model(GEMINI_MODEL, model_provider="google_genai")
 
-def query_or_respond(state: MessagesState):
-    from .prompts import create_system_message
-    
+def query_or_respond(state: ChatState):
     # Add system message at the start of conversation
-    messages = [SystemMessage(content=create_system_message())] + state["messages"]
+    messages = [SystemMessage(content=SYSTEM_PROMPT.invoke(
+        {"docs_content": "", "user_profile": ""}
+    ).to_string())] + state["messages"]
     
     llm_with_tools = llm.bind_tools([search_services_by_similarity])
     response = llm_with_tools.invoke(messages)
@@ -20,7 +24,7 @@ def query_or_respond(state: MessagesState):
 
 tools_node = ToolNode([search_services_by_similarity])
 
-def generate(state: MessagesState):
+def generate(state: ChatState):
     recent_tool_messages = []
     for message in reversed(state["messages"]):
         if message.type == "tool":
@@ -28,33 +32,28 @@ def generate(state: MessagesState):
         else:
             break
     tool_messages = recent_tool_messages[::-1]
+    docs_content = "\n\n".join(doc.content for doc in tool_messages) if tool_messages else ""
 
-    # If we have tool results, it means we found some government services
-    docs_content = "\n\n".join(doc.content for doc in tool_messages)
-    
-    # Import the prompts
-    from .prompts import create_system_message, create_out_of_scope_response
-    
-    # If no relevant services found, likely the query is out of scope
     system_message_content = (
-        create_system_message(docs_content) if docs_content.strip() 
-        else create_system_message() + "\n\n" + create_out_of_scope_response()
+        SYSTEM_PROMPT.invoke({
+            "docs_content": docs_content if docs_content.strip() or any("tool" in msg.type for msg in state["messages"]) else "",
+            "user_profile": state['user_profile']
+        }).to_string() 
     )
-    
+    print(system_message_content)
+
     conversation_messages = [
-        msg 
+        msg
         for msg in state["messages"]
-        if msg.type in ("human", "system") 
+        if msg.type in ("human", "system")
         or (msg.type == "ai" and not msg.tool_calls)
     ]
     prompt = [SystemMessage(content=system_message_content)] + conversation_messages
-
     response = llm.invoke(prompt)
     return {"messages": [response]}
 
-
 def compile_graph():
-    graph_builder = StateGraph(MessagesState)
+    graph_builder = StateGraph(ChatState)
     graph_builder.add_node("query_or_respond", query_or_respond)
     graph_builder.add_node("tools", tools_node)
     graph_builder.add_node("generate", generate)
