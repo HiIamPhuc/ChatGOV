@@ -11,6 +11,7 @@ if not os.getenv("SUPABASE_URL") or not os.getenv("SUPABASE_KEY"):
         "Please set SUPABASE_URL and SUPABASE_KEY in environment or .env file."
     )
 
+
 MODE = os.getenv("MODE", "dev")  # 'dev' or 'prod'
 
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
