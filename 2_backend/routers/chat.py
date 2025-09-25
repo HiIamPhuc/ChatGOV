@@ -1,3 +1,4 @@
+from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, AIMessageChunk
 import uuid
 import json
 from fastapi import APIRouter, HTTPException, Body
@@ -26,7 +27,8 @@ async def start_session(request: StartSessionRequest = Body(...)):
 
     session_id = str(uuid.uuid4())
 
-    session = Session(session_id=session_id, user_id=request.user_id, chat_history=[])
+    session = Session(session_id=session_id,
+                      user_id=request.user_id, chat_history=[])
     save_session(session)
 
     user.sessions.append(session_id)
@@ -50,7 +52,8 @@ async def chat(request: ChatRequest = Body(...)):
     graph = compile_graph()
 
     chat_history = deserialize_chat_history(session_data.chat_history)
-    user_message = {"role": "user", "content": request.message, "type": "human"}
+    user_message = {"role": "user",
+                    "content": request.message, "type": "human"}
 
     initial_state: ChatState = {
         "messages": chat_history + [user_message],
@@ -62,7 +65,8 @@ async def chat(request: ChatRequest = Body(...)):
 
         # Chuẩn hoá message objects để graph không nhận dict lẫn BaseMessage
         try:
-            normalized_msgs = [_ensure_message_obj(m) for m in initial_state["messages"]]  # type: ignore
+            normalized_msgs = [_ensure_message_obj(
+                m) for m in initial_state["messages"]]  # type: ignore
             initial_state["messages"] = normalized_msgs  # type: ignore
         except Exception:
             pass
@@ -82,7 +86,7 @@ async def chat(request: ChatRequest = Body(...)):
                     delta = full_text[len(last_streamed_text):]
                     last_streamed_text = full_text
 
-                    # ✅ Gửi JSON để FE dễ ghép chuỗi
+                    # Gửi JSON để FE dễ ghép chuỗi
                     payload = {"delta": delta}
                     yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
 
@@ -92,11 +96,13 @@ async def chat(request: ChatRequest = Body(...)):
 
         # Lưu lịch sử chat
         try:
-            final_msgs = [_ensure_message_obj(m) for m in final_state["messages"]]
+            final_msgs = [_ensure_message_obj(m)
+                          for m in final_state["messages"]]
             session_data.chat_history = serialize_chat_history(final_msgs)
             save_session(session_data)
         except Exception:
-            session_data.chat_history = serialize_chat_history(final_state["messages"])
+            session_data.chat_history = serialize_chat_history(
+                final_state["messages"])
             save_session(session_data)
 
         # Kết thúc stream
@@ -117,9 +123,6 @@ async def chat(request: ChatRequest = Body(...)):
 
 
 # === Helpers ===
-from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, AIMessageChunk
-
-
 def _ensure_message_obj(obj):
     """dict/BaseMessage -> BaseMessage"""
     if isinstance(obj, BaseMessage):

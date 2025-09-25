@@ -1,4 +1,6 @@
-import os, json, base64
+import os
+import json
+import base64
 from datetime import timedelta
 from fastapi import APIRouter, HTTPException, Response, Request, Header
 from pydantic import BaseModel, EmailStr, Field
@@ -13,9 +15,11 @@ admin_client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
 # ===== Cookie config =====
 COOKIE_DOMAIN = (os.getenv("BACKEND_COOKIE_DOMAIN") or "").strip() or None
-COOKIE_SECURE = (os.getenv("BACKEND_COOKIE_SECURE") or "false").lower() == "true"
+COOKIE_SECURE = (os.getenv("BACKEND_COOKIE_SECURE")
+                 or "false").lower() == "true"
 ACCESS_COOKIE = "sb-access-token"
 REFRESH_COOKIE = "sb-refresh-token"
+
 
 def set_session_cookies(resp: Response, access_token: str, refresh_token: str | None):
     resp.set_cookie(
@@ -26,6 +30,7 @@ def set_session_cookies(resp: Response, access_token: str, refresh_token: str | 
         key=REFRESH_COOKIE, value=refresh_token or "", httponly=True, secure=COOKIE_SECURE,
         samesite="lax", domain=COOKIE_DOMAIN, max_age=int(timedelta(days=30).total_seconds()), path="/",
     )
+
 
 def clear_session_cookies(resp: Response):
     resp.delete_cookie(ACCESS_COOKIE, domain=COOKIE_DOMAIN, path="/")
@@ -38,20 +43,25 @@ class RegisterBody(BaseModel):
     fullName: str | None = None
     metadata: dict | None = None
 
+
 class LoginBody(BaseModel):
     email: EmailStr
     password: str
 
+
 class ForgotBody(BaseModel):
     email: EmailStr
 
+
 class ResetBody(BaseModel):
     new_password: str = Field(min_length=6)
+
 
 class MeResponse(BaseModel):
     id: str
     email: EmailStr
     user_metadata: dict = {}
+
 
 class ExchangeBody(BaseModel):
     access_token: str
@@ -65,11 +75,13 @@ def _decode_jwt_payload(token: str) -> dict:
             return {}
         payload_b64 = parts[1]
         padding = '=' * (-len(payload_b64) % 4)
-        import base64 as _b64, json as _json
+        import base64 as _b64
+        import json as _json
         data = _b64.urlsafe_b64decode(payload_b64 + padding)
         return _json.loads(data.decode("utf-8"))
     except Exception:
         return {}
+
 
 def _get_user_by_jwt_using_sdk(jwt: str):
     client.auth._set_auth(jwt)
@@ -94,16 +106,17 @@ def register(body: RegisterBody):
 
         # Tài khoản đã tồn tại (Supabase trả identities = [])
         if hasattr(res.user, "identities") and res.user.identities == []:
-            raise HTTPException(status_code=400, detail="Tài khoản đã tồn tại, email đã được đăng ký")
+            raise HTTPException(
+                status_code=400, detail="Tài khoản đã tồn tại, email đã được đăng ký")
 
-        # >>> TẠO HÀNG TRONG profiles bằng SERVICE ROLE (bỏ qua RLS)
+        # TẠO HÀNG TRONG profiles bằng SERVICE ROLE (bỏ qua RLS)
         try:
             admin_client.table("profiles").insert({
                 "id": res.user.id,
                 "name": body.fullName or None,
             }).execute()
         except Exception:
-            # nếu đã có (do chạy lại) thì bỏ qua
+            # nếu đã có do chạy lại thì bỏ qua
             pass
 
         return {"ok": True, "user": {"id": res.user.id, "email": res.user.email}}
@@ -117,10 +130,12 @@ def register(body: RegisterBody):
 @router.post("/api/auth/login", response_model=MeResponse)
 def login(body: LoginBody, response: Response):
     try:
-        res = client.auth.sign_in_with_password({"email": body.email, "password": body.password})
+        res = client.auth.sign_in_with_password(
+            {"email": body.email, "password": body.password})
         if not res or not getattr(res, "session", None) or not getattr(res.session, "access_token", None):
             raise HTTPException(status_code=401, detail="Invalid credentials")
-        set_session_cookies(response, res.session.access_token, getattr(res.session, "refresh_token", ""))
+        set_session_cookies(response, res.session.access_token,
+                            getattr(res.session, "refresh_token", ""))
         u = res.user
         return MeResponse(id=u.id, email=u.email, user_metadata=u.user_metadata or {})
     except HTTPException:
@@ -136,6 +151,7 @@ def login(body: LoginBody, response: Response):
         print("[LOGIN ERROR]", repr(e))
         raise HTTPException(status_code=500, detail=msg)
 
+
 @router.post("/api/auth/logout")
 def logout(response: Response, request: Request):
     try:
@@ -149,39 +165,50 @@ def logout(response: Response, request: Request):
         clear_session_cookies(response)
     return {"ok": True}
 
+
 @router.post("/api/auth/forgot-password")
 def forgot_password(body: ForgotBody):
     try:
         redirect_to = "http://localhost:5173/reset"
-        client.auth.reset_password_email(body.email, options={"redirect_to": redirect_to})
+        client.auth.reset_password_email(
+            body.email, options={"redirect_to": redirect_to})
         return {"ok": True}
     except Exception:
-        raise HTTPException(status_code=500, detail="Failed to send reset email")
+        raise HTTPException(
+            status_code=500, detail="Failed to send reset email")
+
 
 @router.post("/api/auth/reset-password")
 def reset_password(body: ResetBody, request: Request):
     authz = request.headers.get("Authorization", "")
     if not authz.lower().startswith("bearer "):
-        raise HTTPException(status_code=400, detail="Missing recovery access token")
+        raise HTTPException(
+            status_code=400, detail="Missing recovery access token")
     recovery_token = authz.split(" ", 1)[1].strip()
     if not recovery_token:
-        raise HTTPException(status_code=400, detail="Missing recovery access token")
+        raise HTTPException(
+            status_code=400, detail="Missing recovery access token")
 
     try:
         payload = _decode_jwt_payload(recovery_token)
         user_id = payload.get("sub") or payload.get("user_id")
         if not user_id:
-            raise HTTPException(status_code=400, detail="Invalid recovery token")
+            raise HTTPException(
+                status_code=400, detail="Invalid recovery token")
 
-        updated = client.auth.admin.update_user_by_id(user_id, {"password": body.new_password})
+        updated = client.auth.admin.update_user_by_id(
+            user_id, {"password": body.new_password})
         if not updated or not getattr(updated, "user", None):
-            raise HTTPException(status_code=400, detail="Failed to reset password")
+            raise HTTPException(
+                status_code=400, detail="Failed to reset password")
         return {"ok": True}
     except HTTPException:
         raise
     except Exception as e:
         print("[RESET ERROR]", repr(e))
-        raise HTTPException(status_code=500, detail=str(e) or "Reset password failed")
+        raise HTTPException(status_code=500, detail=str(e)
+                            or "Reset password failed")
+
 
 @router.get("/api/auth/me", response_model=MeResponse)
 def me(request: Request, authorization: str | None = Header(None)):
@@ -207,6 +234,7 @@ def me(request: Request, authorization: str | None = Header(None)):
         email = payload.get("email") or "unknown@example.com"
         return MeResponse(id=uid, email=email, user_metadata=payload.get("user_metadata") or {})
 
+
 @router.post("/api/auth/session/exchange", response_model=MeResponse)
 def exchange_session(body: ExchangeBody, response: Response):
     if not body.access_token:
@@ -218,10 +246,12 @@ def exchange_session(body: ExchangeBody, response: Response):
             raise HTTPException(status_code=401, detail="Invalid access token")
         uid = payload.get("sub") or payload.get("user_id") or "unknown"
         email = payload.get("email") or "unknown@example.com"
-        meta = payload.get("user_metadata") or payload.get("app_metadata") or {}
+        meta = payload.get("user_metadata") or payload.get(
+            "app_metadata") or {}
         return MeResponse(id=uid, email=email, user_metadata=meta)
     except HTTPException:
         raise
     except Exception as e:
         print("[EXCHANGE ERROR]", repr(e))
-        raise HTTPException(status_code=500, detail=str(e) or "Exchange session failed")
+        raise HTTPException(status_code=500, detail=str(e)
+                            or "Exchange session failed")

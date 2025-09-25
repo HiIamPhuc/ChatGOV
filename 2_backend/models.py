@@ -1,6 +1,7 @@
 from typing import List, Optional
 from pydantic import BaseModel
 
+
 class User(BaseModel):
     id: str  # Matches auth.users.id (UUID)
     email: Optional[str] = None  # Optional field from auth.users
@@ -13,7 +14,7 @@ class User(BaseModel):
         - Email: {self.email if self.email else 'N/A'}\n
         - Phone: {self.phone if self.phone else 'N/A'}\n
         """
-    
+
 
 class Session(BaseModel):
     session_id: str

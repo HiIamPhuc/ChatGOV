@@ -8,7 +8,8 @@ if SUPABASE_URL is None:
     raise TypeError("SUPABASE_URL is invalid")
 
 if MODE == "dev":
-    client: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)  # type: ignore
+    client: Client = create_client(
+        SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)  # type: ignore
 elif MODE == "prod":
     client: Client = create_client(SUPABASE_URL, SUPABASE_KEY)  # type: ignore
 else:
@@ -18,14 +19,14 @@ else:
 def get_user(user_id: str) -> Optional[User]:
     # Ưu tiên dùng SRK nếu có
     if SUPABASE_SERVICE_ROLE_KEY:
-        admin_client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)  # type: ignore
+        admin_client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
         try:
             resp = admin_client.auth.admin.get_user_by_id(user_id)
             if resp.user:
                 return User(id=resp.user.id, email=resp.user.email, phone=resp.user.phone)
         except Exception:
             pass
-    # Fallback như trên
+    # Fallback dùng client thường
     return User(id=user_id, email=None, phone=None)
 
 
@@ -36,7 +37,8 @@ def save_user(user: User):
 
 def get_session(session_id: str) -> Optional[Session]:
     response = (
-        client.table("sessions").select("*").eq("session_id", session_id).execute()
+        client.table("sessions").select(
+            "*").eq("session_id", session_id).execute()
     )
     if response.data:
         return Session(**response.data[0])

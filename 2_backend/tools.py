@@ -109,7 +109,8 @@ def get_procedure_information(service_id: str, column_name: str = "all") -> str:
 
             # Fallback to direct query if RPC fails
             if not column_value:
-                column_value = get_procedure_column_direct(service_id, column_name)
+                column_value = get_procedure_column_direct(
+                    service_id, column_name)
 
             if not column_value:
                 return f"Không tìm thấy thông tin `{column_name}` cho thủ tục có ID: `{service_id}`"
@@ -129,7 +130,8 @@ def format_all_procedure_info(procedure_info: dict) -> str:
         formatted_info.append(f"# {procedure_info['ten_thu_tuc']}\n")
 
     if "ma_thu_tuc" in procedure_info:
-        formatted_info.append(f"**Mã thủ tục:** {procedure_info['ma_thu_tuc']}")
+        formatted_info.append(
+            f"**Mã thủ tục:** {procedure_info['ma_thu_tuc']}")
 
     # Column display mapping with Vietnamese labels and emojis
     display_mapping = {
@@ -218,7 +220,8 @@ def format_specific_column_info(
     if column_name == "link_tai_tai_lieu" and column_value != "None":
         if "||" in column_value:
             links = [link.strip() for link in column_value.split("||")]
-            link_list = "\n".join([f"• {link}" for link in links if link.strip()])
+            link_list = "\n".join(
+                [f"• {link}" for link in links if link.strip()])
             return f"{label}:\n{link_list}"
         else:
             return f"{label}:\n• {column_value}"

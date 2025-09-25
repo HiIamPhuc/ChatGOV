@@ -8,15 +8,16 @@ from .routers import chat, graph, auth, profile, sessions
 app = FastAPI()
 
 # CORS settings
-ALLOWED_ORIGINS = (os.getenv("CORS_ALLOW_ORIGINS") or "http://localhost:5173").split(",")
+ALLOWED_ORIGINS = (os.getenv("CORS_ALLOW_ORIGINS")
+                   or "http://localhost:5173").split(",")
 ALLOWED_ORIGINS = [o.strip() for o in ALLOWED_ORIGINS if o.strip()]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,                 # để gửi cookie HttpOnly
-    allow_methods=["GET","POST","OPTIONS","PUT","PATCH","DELETE"],
-    allow_headers=["*"],                   
+    allow_methods=["GET", "POST", "OPTIONS", "PUT", "PATCH", "DELETE"],
+    allow_headers=["*"],
 )
 
 app.include_router(chat.router)
@@ -24,6 +25,7 @@ app.include_router(graph.router)
 app.include_router(auth.router)
 app.include_router(profile.router)
 app.include_router(sessions.router)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

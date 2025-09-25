@@ -7,23 +7,29 @@ from .config import GEMINI_MODEL
 from .tools import find_available_services, get_procedure_information
 from .prompts import SYSTEM_PROMPT
 
+
 class ChatState(MessagesState):
     user_profile: Annotated[dict, "Contain user profile"] = {}
 
+
 llm = init_chat_model(GEMINI_MODEL, model_provider="google_genai")
+
 
 def query_or_respond(state: ChatState):
     # Add system message at the start of conversation
     messages = [SystemMessage(content=SYSTEM_PROMPT.invoke(
         {"docs_content": "", "user_profile": state.get("user_profile", {})}
     ).to_string())] + state["messages"]
-    
+
     # Bind both tools for service search and information retrieval
-    llm_with_tools = llm.bind_tools([find_available_services, get_procedure_information])
+    llm_with_tools = llm.bind_tools(
+        [find_available_services, get_procedure_information])
     response = llm_with_tools.invoke(messages)
     return {"messages": [response], "user_profile": state.get("user_profile", {})}
 
+
 tools_node = ToolNode([find_available_services, get_procedure_information])
+
 
 def generate(state: ChatState):
     recent_tool_messages = []
@@ -33,15 +39,16 @@ def generate(state: ChatState):
         else:
             break
     tool_messages = recent_tool_messages[::-1]
-    
+
     # Combine all tool outputs, they might include both service listings and detailed information
-    docs_content = "\n\n".join(doc.content for doc in tool_messages) if tool_messages else ""
+    docs_content = "\n\n".join(
+        doc.content for doc in tool_messages) if tool_messages else ""
 
     system_message_content = (
         SYSTEM_PROMPT.invoke({
             "docs_content": docs_content if docs_content.strip() else "",
             "user_profile": state.get("user_profile", {})
-        }).to_string() 
+        }).to_string()
     )
 
     conversation_messages = [
@@ -50,9 +57,11 @@ def generate(state: ChatState):
         if msg.type in ("human", "system")
         or (msg.type == "ai" and not msg.tool_calls)
     ]
-    prompt = [SystemMessage(content=system_message_content)] + conversation_messages
+    prompt = [SystemMessage(content=system_message_content)
+              ] + conversation_messages
     response = llm.invoke(prompt)
     return {"messages": [response]}
+
 
 def compile_graph():
     graph_builder = StateGraph(ChatState)
