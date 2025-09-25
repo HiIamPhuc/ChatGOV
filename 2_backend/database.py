@@ -16,16 +16,17 @@ else:
 
 
 def get_user(user_id: str) -> Optional[User]:
-    # Query auth.users table directly
-    response = client.auth.admin.get_user_by_id(user_id)
-    if response.user:
-        return User(
-            id=response.user.id,
-            email=response.user.email,
-            phone=response.user.phone,
-            # ADD MORE FIELDS
-        )
-    return None
+    # Ưu tiên dùng SRK nếu có
+    if SUPABASE_SERVICE_ROLE_KEY:
+        admin_client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)  # type: ignore
+        try:
+            resp = admin_client.auth.admin.get_user_by_id(user_id)
+            if resp.user:
+                return User(id=resp.user.id, email=resp.user.email, phone=resp.user.phone)
+        except Exception:
+            pass
+    # Fallback như trên
+    return User(id=user_id, email=None, phone=None)
 
 
 def save_user(user: User):

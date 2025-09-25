@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .routers import chat, graph, auth, profile
+from .routers import chat, graph, auth, profile, sessions
 # from .config import llm, embeddings  # Ensure initialized; embeddings not used now, but keep for potential future
 
 app = FastAPI()
@@ -23,6 +23,7 @@ app.include_router(chat.router)
 app.include_router(graph.router)
 app.include_router(auth.router)
 app.include_router(profile.router)
+app.include_router(sessions.router)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
