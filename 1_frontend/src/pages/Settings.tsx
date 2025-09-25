@@ -10,17 +10,21 @@ export default function SettingsPage() {
 
       <section className="card">
         <header className="cardHead">{t("language")}</header>
-        <div className="seg">
+        <div className="seg" role="tablist" aria-label={t("language")}>
           <button
+            role="tab"
             className={lang === "vi" ? "opt active" : "opt"}
             onClick={() => setLang("vi")}
+            aria-selected={lang === "vi"}
             aria-pressed={lang === "vi"}
           >
             VI
           </button>
           <button
+            role="tab"
             className={lang === "en" ? "opt active" : "opt"}
             onClick={() => setLang("en")}
+            aria-selected={lang === "en"}
             aria-pressed={lang === "en"}
           >
             EN
@@ -65,31 +69,38 @@ const Wrap = styled.div`
     height: 36px;
     min-width: 64px;
     padding: 0 14px;
-    border-radius: 10px;
+    border-radius: 12px;
     border: 1px solid ${({ theme }) => theme.colors.border};
     background: #fff;
     color: ${({ theme }) => theme.colors.accent};
-    font-weight: 700;
+    font-weight: 800;
     cursor: pointer;
-    transition: 0.2s;
+    transition: background 0.2s, border-color 0.2s, box-shadow 0.2s,
+      color 0.2s, transform 0.08s;
   }
   .opt:hover {
     background: #fff5ef;
     border-color: #f0d2c5;
   }
+
   .opt.active {
-    background: linear-gradient(
-      90deg,
-      ${({ theme }) => theme.colors.accent},
-      ${({ theme }) => theme.colors.accent2}
-    );
+    background:
+      linear-gradient(
+        90deg,
+        ${({ theme }) => theme.colors.accent},
+        ${({ theme }) => theme.colors.accent2}
+      ) padding-box,
+      linear-gradient(
+        90deg,
+        ${({ theme }) => theme.colors.accent},
+        ${({ theme }) => theme.colors.accent2}
+      ) border-box;
+    border: 1px solid transparent; 
     color: #fff;
-    border-color: transparent;
     box-shadow: 0 6px 16px rgba(206, 122, 88, 0.35);
+    transform: translateY(-1px);
   }
-  .hint {
-    margin-top: 10px;
-    color: ${({ theme }) => theme.colors.secondary};
-    font-size: 0.95rem;
+  .opt.active:hover {
+    box-shadow: 0 8px 18px rgba(206, 122, 88, 0.42);
   }
 `;

@@ -26,7 +26,7 @@ const DICTS: Record<Lang, Dict> = {
 
     // Chat & sidebar
     history: "History",
-    heroTitle: "What are you working on?",
+    heroTitle: "What online public service registration do you need help with?",
     you_asked: "You asked:",
     noSessions: "No sessions yet",
     settings: "Settings",
@@ -128,7 +128,7 @@ const DICTS: Record<Lang, Dict> = {
 
     // Chat & sidebar
     history: "Lịch sử",
-    heroTitle: "Bạn đang muốn làm gì?",
+    heroTitle: "Bạn đang cần hỗ trợ đăng kí online dịch vụ công nào?",
     you_asked: "Bạn vừa hỏi:",
     noSessions: "Chưa có phiên nào",
     settings: "Cài đặt",

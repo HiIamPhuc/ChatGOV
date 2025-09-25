@@ -249,9 +249,12 @@ const Wrap = styled.aside<{ $bg: string }>`
     font-size: 0.99rem;
     font-weight: 1000;
     letter-spacing: 0.02em;
-    color: ${({ theme }) => theme.colors.accent2};
-    opacity: 0.96;
+    color: color-mix(in srgb, ${({ theme }) => theme.colors.accent2} 75%, black);
+    opacity: 1;
     margin: 6px 4px 8px;
+    text-shadow: 0 1px 2px rgba(255,255,255,0.6);
+
+
   }
 
   .footer {
@@ -384,12 +387,26 @@ const SvgUser = (p: React.SVGProps<SVGSVGElement>) => (
     <path d="M3 20a9 6 0 0 1 18 0v1H3z" strokeWidth="2" />
   </svg>
 );
+
 const SvgSettings = (p: React.SVGProps<SVGSVGElement>) => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" {...p}>
-    <path d="M12 8a4 4 0 1 1-4 4 4 4 0 0 1 4-4Z" strokeWidth="2" />
-    <path d="M2 12h3m14 0h3M12 2v3m0 14v3M4.2 4.2l2.1 2.1m11.4 11.4 2.1 2.1M4.2 19.8l2.1-2.1m11.4-11.4 2.1-2.1" strokeWidth="2" />
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    {...p}
+  >
+    {/* bánh răng 6 răng đối xứng */}
+    <circle cx="12" cy="12" r="3" />
+    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09c.7 0 1.31-.4 1.51-1a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06c.51.51 1.23.66 1.82.33.46-.26 1-.81 1-1.51V3a2 2 0 0 1 4 0v.09c0 .7.4 1.31 1 1.51.59.33 1.31.18 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06c-.36.36-.48.9-.33 1.82.2.59.81 1 1.51 1H21a2 2 0 0 1 0 4h-.09c-.7 0-1.31.4-1.51 1Z" />
   </svg>
 );
+
+
+
+
 const SvgLogout = (p: React.SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" {...p}>
     <path d="M10 7V4a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2h-6a2 2 0 0 1-2-2v-3" stroke="currentColor" strokeWidth="2" />

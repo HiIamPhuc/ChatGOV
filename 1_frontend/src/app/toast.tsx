@@ -1,31 +1,25 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
 import styled, { keyframes } from "styled-components";
+import { Info, AlertTriangle, XCircle, CheckCircle2 } from "lucide-react";
 
 type Tone = "info" | "warn" | "error" | "success";
 type Toast = {
   id: string;
   title: string;
-  content?: string;
+  content?: unknown;               // ← nới lỏng type để không crash
   linkText?: string;
   linkHref?: string;
   tone?: Tone;
 };
-type ToastCtx = {
-  notify: (t: Omit<Toast, "id">) => void;
-  dismiss: (id: string) => void;
-};
+type ToastCtx = { notify: (t: Omit<Toast, "id">) => void; dismiss: (id: string) => void; };
 const Ctx = createContext<ToastCtx>({ notify: () => {}, dismiss: () => {} });
 
 export const useToast = () => useContext(Ctx);
 
 export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [toasts, setToasts] = useState<Toast[]>([]);
-
-  const dismiss = useCallback((id: string) => {
-    setToasts(prev => prev.filter(x => x.id !== id));
-  }, []);
-
-  const notify = useCallback((t: Omit<Toast, "id">) => {
+  const dismiss = useCallback((id: string) => setToasts(prev => prev.filter(x => x.id !== id)), []);
+  const notify  = useCallback((t: Omit<Toast, "id">) => {
     const id = (crypto as any)?.randomUUID?.() || String(Date.now() + Math.random());
     setToasts(prev => [...prev, { id, ...t }]);
   }, []);
@@ -34,47 +28,55 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     <Ctx.Provider value={{ notify, dismiss }}>
       {children}
       <Wrap role="region" aria-live="polite" aria-atomic="false">
-        {toasts.map(t => (
-          <ToastItem key={t.id} toast={t} onDismiss={() => dismiss(t.id)} />
-        ))}
+        {toasts.map(t => <ToastItem key={t.id} toast={t} onDismiss={() => dismiss(t.id)} />)}
       </Wrap>
     </Ctx.Provider>
   );
 };
 
+const toStringSafe = (v: unknown): string =>
+  typeof v === "string" ? v : (() => { try { return JSON.stringify(v); } catch { return String(v); } })();
+
+/* ================= item ================= */
 const ToastItem: React.FC<{ toast: Toast; onDismiss: () => void }> = ({ toast, onDismiss }) => {
   const tone: Tone = toast.tone ?? "info";
   const [leaving, setLeaving] = useState(false);
 
   useEffect(() => {
-    const t = setTimeout(() => {
-      setLeaving(true);
-      setTimeout(onDismiss, 320);
-    }, 6000);
+    const t = setTimeout(() => { setLeaving(true); setTimeout(onDismiss, 320); }, 6000);
     return () => clearTimeout(t);
   }, [onDismiss]);
+
+  const ToneIcon =
+    tone === "success" ? CheckCircle2 :
+    tone === "error"   ? XCircle      :
+    tone === "warn"    ? AlertTriangle: Info;
 
   return (
     <Item tone={tone}>
       <Card data-leaving={leaving ? "true" : "false"}>
-        <div className="text-content">
-          <p className="card-heading">{toast.title}</p>
-          {!!toast.content && <p className="card-content">{toast.content}</p>}
-          {!!toast.linkText && (
-            <a href={toast.linkHref ?? "#"} className="card-link">
-              {toast.linkText}
-            </a>
-          )}
-          <button
-            className="exit-btn"
-            onClick={() => { setLeaving(true); setTimeout(onDismiss, 320); }}
-            aria-label="Close"
-          >
-            <svg fill="none" viewBox="0 0 15 15" height={15} width={15} aria-hidden="true">
-              <path strokeLinecap="round" strokeWidth={2} stroke="black" d="M1 14L14 1" />
-              <path strokeLinecap="round" strokeWidth={2} stroke="black" d="M1 1L14 14" />
-            </svg>
-          </button>
+        <button
+          className="exit-btn"
+          onClick={() => { setLeaving(true); setTimeout(onDismiss, 320); }}
+          aria-label="Close"
+        >
+          <svg fill="none" viewBox="0 0 15 15" height={15} width={15} aria-hidden="true">
+            <path strokeLinecap="round" strokeWidth={2} stroke="currentColor" d="M1 14L14 1" />
+            <path strokeLinecap="round" strokeWidth={2} stroke="currentColor" d="M1 1L14 14" />
+          </svg>
+        </button>
+
+        <div className="row">
+          <span className="tone"><ToneIcon size={18} strokeWidth={2.5} /></span>
+          <div className="text">
+            <p className="heading">{toast.title}</p>
+            {toast.content != null && (
+              <p className="content">{toStringSafe(toast.content)}</p> 
+            )}
+            {!!toast.linkText && (
+              <a href={toast.linkHref ?? "#"} className="link">{toast.linkText}</a>
+            )}
+          </div>
         </div>
       </Card>
     </Item>
@@ -82,84 +84,58 @@ const ToastItem: React.FC<{ toast: Toast; onDismiss: () => void }> = ({ toast, o
 };
 
 /* ================= styles ================= */
-const slideIn = keyframes`
-  from { transform: translateX(16px); opacity: 0; }
-  to   { transform: translateX(0);     opacity: 1; }
-`;
-const slideOut = keyframes`
-  from { transform: translateX(0);     opacity: 1; }
-  to   { transform: translateX(16px);  opacity: 0; }
-`;
+const slideIn = keyframes`from{transform:translateX(16px);opacity:0}to{transform:translateX(0);opacity:1}`;
+const slideOut= keyframes`from{transform:translateX(0);opacity:1}to{transform:translateX(16px);opacity:0}`;
 
-const toneColor: Record<Tone, string> = {
-  info: "#60B6FF",
-  warn: "#FFB700",
-  error: "#FF7373",
-  success: "#3AD29F",
-};
-
-const PAD   = 5;   // underlay to hơn card
-const HOVER = 10;  // độ tịnh tiến khi hover
+const PAD=5, HOVER=10;
 
 const Wrap = styled.div`
-  position: fixed;
-  top: 16px;
-  right: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  z-index: 9999;
-  pointer-events: none;
-
-  /* chừa chỗ để underlay trượt ra mà không tràn viewport */
-  padding-right: ${HOVER + PAD}px;
-  padding-bottom: ${HOVER + PAD}px;
+  position: fixed; top:16px; right:16px; display:flex; flex-direction:column; gap:12px; z-index:9999; pointer-events:none;
+  padding-right:${HOVER + PAD}px; padding-bottom:${HOVER + PAD}px;
 `;
 
 const Item = styled.div<{ tone: Tone }>`
-  position: relative;
-  display: inline-block;
-  pointer-events: auto;
+  position:relative; display:inline-block; pointer-events:auto;
 
-  /* Underlay: to hơn nhờ padding, bù lại bằng margin âm để KHÍT ở trạng thái thường */
+  --tone: ${({ tone, theme }) => {
+    switch (tone) {
+      case "success": return theme.colors.success;
+      case "error":   return theme.colors.danger;
+      case "warn":    return "color-mix(in srgb, #ffb700 80%, #fff)";
+      default:        return theme.colors.accent;
+    }
+  }};
+  --tone-soft: color-mix(in srgb, var(--tone) 18%, #fff);
+
   &::before{
-    content:"";
-    position:absolute;
-    top:0; left:0; width:100%; height:100%;
-    background:${({tone}) => toneColor[tone]};
-    z-index:-1;
-
-    padding:${PAD}px;     /* làm to hơn 4 phía */
-    margin:-${PAD}px;     /* bù lại */
-    transform: translate(0,0);   /* trạng thái thường: trùng khít */
-    transition: transform .3s ease;
+    content:""; position:absolute; inset:0;
+    background: var(--tone-soft);
+    box-shadow: 0 10px 26px color-mix(in srgb, var(--tone) 20%, transparent);
+    z-index:-1; padding:${PAD}px; margin:-${PAD}px;
+    transform: translate(0,0); transition: transform .3s ease; border-radius:14px;
   }
-
-  /* Hover: tịnh tiến tone xuống dưới & sang trái */
-  &:hover::before{
-    transform: translate(-${HOVER}px, ${HOVER}px);
-  }
+  &:hover::before{ transform: translate(-${HOVER}px, ${HOVER}px); }
 `;
 
 const Card = styled.div`
-  position: relative;
-  z-index: 0;
-  width: 320px;
-  border-radius: 0; 
-  overflow: hidden;
-  background: #fff0d1;
+  position:relative; z-index:0; width:360px; border-radius:14px; overflow:hidden;
+  background:${({theme})=>theme.colors.surface};
+  border:1px solid ${({theme})=>theme.colors.border};
+  box-shadow:${({theme})=>theme.shadow}; backdrop-filter:blur(6px);
+  animation:${slideIn} 260ms ease-out both; &[data-leaving="true"]{animation:${slideOut} 260ms ease-in both;}
 
-  animation: ${slideIn} 260ms ease-out both;
-  &[data-leaving="true"] { animation: ${slideOut} 260ms ease-in both; }
+  .row{ display:flex; align-items:flex-start; gap:10px; padding:12px 40px 12px 12px; }
+  .tone{ flex:0 0 auto; display:grid; place-items:center; width:28px; height:28px; border-radius:999px;
+         background:var(--tone-soft); color:var(--tone);
+         border:1px solid color-mix(in srgb, var(--tone) 30%, #fff); }
+  .text{ display:flex; flex-direction:column; gap:4px; min-width:0; }
+  .heading{ font-size:.98rem; font-weight:800; color:${({theme})=>theme.colors.primary}; }
+  .content{ font-size:.94rem; font-weight:500; color:${({theme})=>theme.colors.secondary};
+            white-space:pre-line; word-break:break-word; }   /* ← hiển thị xuống dòng */
+  .link{ margin-top:2px; color:${({theme})=>theme.colors.accent}; font-weight:700; text-decoration:underline; text-underline-offset:2px; }
 
-  .text-content{ width:100%; display:flex; flex-direction:column; padding:14px 18px; gap:6px; }
-  .card-heading{ font-size:1em; font-weight:800; color:#111; }
-  .card-content{ font-size:.95em; font-weight:500; color:#313131; }
-  .card-link{ color:#000; font-weight:700; text-decoration: underline; text-underline-offset: 2px; margin-top:4px; }
-
-  .exit-btn{
-    position:absolute; right:8px; top:8px; width:30px; height:30px;
-    background:transparent; border:none; cursor:pointer; border-radius:6px;
-  }
-  .exit-btn:hover{ background:#EADABA; }
+  .exit-btn{ position:absolute; right:6px; top:6px; width:28px; height:28px; display:grid; place-items:center;
+             border:none; background:transparent; border-radius:8px;
+             color:${({theme})=>theme.colors.secondary}; cursor:pointer; transition:background .15s ease, color .15s ease; }
+  .exit-btn:hover{ background:var(--tone-soft); color:${({theme})=>theme.colors.primary}; }
 `;

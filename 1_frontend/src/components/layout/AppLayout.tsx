@@ -1,5 +1,5 @@
 // frontend/src/components/layout/AppLayout.tsx
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import styled from "styled-components";
 import Sidebar from "@/components/layout/Sidebar";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
@@ -12,12 +12,9 @@ export default function AppLayout() {
   const { t, lang } = useI18n();
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const isChat = pathname.startsWith("/app");
 
   const [collapsed, setCollapsed] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [needProfile, setNeedProfile] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
 
   /* ====== Sidebar state ====== */
   useEffect(() => {
@@ -30,17 +27,6 @@ export default function AppLayout() {
       return n;
     });
 
-  /* ====== Close kebab on outside/ESC ====== */
-  useEffect(() => {
-    const onDown = (e: MouseEvent) => { if (!menuRef.current?.contains(e.target as Node)) setMenuOpen(false); };
-    const onEsc = (e: KeyboardEvent) => { if (e.key === "Escape") setMenuOpen(false); };
-    document.addEventListener("mousedown", onDown);
-    document.addEventListener("keydown", onEsc);
-    return () => {
-      document.removeEventListener("mousedown", onDown);
-      document.removeEventListener("keydown", onEsc);
-    };
-  }, []);
 
   /* ====== Banner: nghe từ API (poll + refetch khi focus/route đổi) ====== */
   useEffect(() => {
@@ -103,7 +89,6 @@ export default function AppLayout() {
   }, [pathname]);
 
   /* ====== Kebab action (demo) ====== */
-  const onDelete = () => { setMenuOpen(false); /* ... */ };
   const goProfile = () => navigate("/profile");
 
   const bannerTitle = lang === "vi" ? "Hoàn tất hồ sơ của bạn" : "Complete your profile";
@@ -127,39 +112,6 @@ export default function AppLayout() {
         <Topbar>
           <div className="chrome">
             <div className="title">{t("appTitle")}</div>
-
-            {isChat && (
-              <div className="actions" ref={menuRef}>
-                <button
-                  className="kebab"
-                  aria-label="More actions"
-                  onClick={() => setMenuOpen((v) => !v)}
-                >
-                  <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-                    <circle cx="12" cy="5" r="2" fill="currentColor" />
-                    <circle cx="12" cy="12" r="2" fill="currentColor" />
-                    <circle cx="12" cy="19" r="2" fill="currentColor" />
-                  </svg>
-                </button>
-
-                {menuOpen && (
-                  <div className="menu" role="menu">
-                    <button className="item danger" onClick={onDelete} role="menuitem">
-                      <span className="icon" aria-hidden="true">
-                        <svg width="18" height="18" viewBox="0 0 24 24">
-                          <path fill="none" d="M0 0h24v24H0z" />
-                          <path
-                            fill="currentColor"
-                            d="M7 7h10l-1 13.01A2 2 0 0 1 14.01 22H9.99A2 2 0 0 1 8 20.01L7 7Zm4-4h2a2 2 0 0 1 2 2v1h3a1 1 0 1 1 0 2H5a1 1 0 1 1 0-2h3V5a2 2 0 0 1 2-2Zm0 3h2V5a1 1 0 0 0-1-1h-1a1 1 0 0 0-1 1v1Zm-1.5 5a1 1 0 0 1 1 1v6a1 1 0 1 1-2 0v-6a1 1 0 0 1 1-1Zm5 0a1 1 0 0 1 1 1v6a1 1 0 1 1-2 0v-6a1 1 0 0 1 1-1Z"
-                          />
-                        </svg>
-                      </span>
-                      <span className="label">Delete</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
           </div>
         </Topbar>
 

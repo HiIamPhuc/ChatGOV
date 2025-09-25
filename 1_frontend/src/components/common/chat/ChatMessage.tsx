@@ -17,7 +17,7 @@ function extractSteps(raw: string): string[] | null {
 }
 
 export default function ChatMessage({ msg }: { msg: Msg }) {
-  const [showSource, setShowSource] = useState(false);
+  const [showSource] = useState(false);
   const steps = useMemo(() => extractSteps(msg.content), [msg.content]);
   const url = useMemo(() => {
     const m = msg.content.match(/https?:\/\/\S+/);
@@ -42,14 +42,8 @@ export default function ChatMessage({ msg }: { msg: Msg }) {
             <div className="toolbar">
               {!!steps && <span className="hint">Hướng dẫn từng bước</span>}
               <div className="spacer" />
-              <button
-                className="ghost"
-                onClick={() => setShowSource((v) => !v)}
-              >
-                {showSource ? "Ẩn Markdown" : "Hiện Markdown"}
-              </button>
               <button className="primary" onClick={copyMarkdown}>
-                Copy Markdown
+                Copy
               </button>
             </div>
 
