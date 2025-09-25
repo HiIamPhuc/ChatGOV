@@ -2,11 +2,16 @@ import os, json, base64
 from datetime import timedelta
 from fastapi import APIRouter, HTTPException, Response, Request, Header
 from pydantic import BaseModel, EmailStr, Field
-from ..database import client
+from supabase import create_client
+from ..database import client  # public (anon)
+from ..config import SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 
 router = APIRouter()
 
-# ====== Cookie config ======
+# ===== Service Role client để thao tác đặc quyền (bỏ qua RLS) =====
+admin_client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+
+# ===== Cookie config =====
 COOKIE_DOMAIN = (os.getenv("BACKEND_COOKIE_DOMAIN") or "").strip() or None
 COOKIE_SECURE = (os.getenv("BACKEND_COOKIE_SECURE") or "false").lower() == "true"
 ACCESS_COOKIE = "sb-access-token"
@@ -26,7 +31,7 @@ def clear_session_cookies(resp: Response):
     resp.delete_cookie(ACCESS_COOKIE, domain=COOKIE_DOMAIN, path="/")
     resp.delete_cookie(REFRESH_COOKIE, domain=COOKIE_DOMAIN, path="/")
 
-# ====== Schemas ======
+# ===== Schemas =====
 class RegisterBody(BaseModel):
     email: EmailStr
     password: str = Field(min_length=6)
@@ -52,28 +57,25 @@ class ExchangeBody(BaseModel):
     access_token: str
     refresh_token: str | None = None
 
-# ====== Helpers ======
-def _get_user_by_jwt_using_sdk(jwt: str):
-    client.auth._set_auth(jwt)
-    return client.auth.get_user()
-
+# ===== Helpers =====
 def _decode_jwt_payload(token: str) -> dict:
-    """
-    Decode phần payload của JWT KHÔNG verify chữ ký (đủ dùng dev).
-    """
     try:
         parts = token.split(".")
         if len(parts) < 2:
             return {}
         payload_b64 = parts[1]
-        # padding
         padding = '=' * (-len(payload_b64) % 4)
-        data = base64.urlsafe_b64decode(payload_b64 + padding)
-        return json.loads(data.decode("utf-8"))
+        import base64 as _b64, json as _json
+        data = _b64.urlsafe_b64decode(payload_b64 + padding)
+        return _json.loads(data.decode("utf-8"))
     except Exception:
         return {}
 
-# ====== Routes ======
+def _get_user_by_jwt_using_sdk(jwt: str):
+    client.auth._set_auth(jwt)
+    return client.auth.get_user()
+
+# ===== Routes =====
 @router.post("/api/auth/register")
 def register(body: RegisterBody):
     try:
@@ -82,17 +84,27 @@ def register(body: RegisterBody):
             "email": body.email,
             "password": body.password,
             "options": {
-                "data": ({"fullName": body.fullName, **(body.metadata or {})} if body.fullName else (body.metadata or {})) or {},
+                "data": ({"fullName": body.fullName, **(body.metadata or {})}
+                         if body.fullName else (body.metadata or {})) or {},
                 "email_redirect_to": confirm_redirect,
             }
         })
-
         if not res or not res.user:
             raise HTTPException(status_code=400, detail="Cannot create user")
 
-        # Nếu identities rỗng => tài khoản đã tồn tại
+        # Tài khoản đã tồn tại (Supabase trả identities = [])
         if hasattr(res.user, "identities") and res.user.identities == []:
             raise HTTPException(status_code=400, detail="Tài khoản đã tồn tại, email đã được đăng ký")
+
+        # >>> TẠO HÀNG TRONG profiles bằng SERVICE ROLE (bỏ qua RLS)
+        try:
+            admin_client.table("profiles").insert({
+                "id": res.user.id,
+                "name": body.fullName or None,
+            }).execute()
+        except Exception:
+            # nếu đã có (do chạy lại) thì bỏ qua
+            pass
 
         return {"ok": True, "user": {"id": res.user.id, "email": res.user.email}}
 
@@ -115,11 +127,11 @@ def login(body: LoginBody, response: Response):
         raise
     except Exception as e:
         msg = str(e) or "Login failed"
-        common_unauth = (
+        if any(x in msg.lower() for x in (
             "invalid login credentials", "email not confirmed",
-            "only sign in with an email address that has been confirmed", "invalid email or password"
-        )
-        if any(x in msg.lower() for x in common_unauth):
+            "only sign in with an email address that has been confirmed",
+            "invalid email or password"
+        )):
             raise HTTPException(status_code=401, detail=msg)
         print("[LOGIN ERROR]", repr(e))
         raise HTTPException(status_code=500, detail=msg)
@@ -148,7 +160,6 @@ def forgot_password(body: ForgotBody):
 
 @router.post("/api/auth/reset-password")
 def reset_password(body: ResetBody, request: Request):
-    # FE gửi header: Authorization: Bearer <recovery_access_token>
     authz = request.headers.get("Authorization", "")
     if not authz.lower().startswith("bearer "):
         raise HTTPException(status_code=400, detail="Missing recovery access token")
@@ -157,27 +168,20 @@ def reset_password(body: ResetBody, request: Request):
         raise HTTPException(status_code=400, detail="Missing recovery access token")
 
     try:
-        # 1) Decode JWT (KHÔNG verify chữ ký) để lấy user id
         payload = _decode_jwt_payload(recovery_token)
         user_id = payload.get("sub") or payload.get("user_id")
         if not user_id:
             raise HTTPException(status_code=400, detail="Invalid recovery token")
 
-        # 2) Dùng Admin API đổi mật khẩu trực tiếp theo user_id
-        #    (cần client tạo bằng SERVICE_ROLE_KEY)
         updated = client.auth.admin.update_user_by_id(user_id, {"password": body.new_password})
         if not updated or not getattr(updated, "user", None):
             raise HTTPException(status_code=400, detail="Failed to reset password")
-
         return {"ok": True}
-
     except HTTPException:
         raise
     except Exception as e:
-        # log dev cho dễ soi
         print("[RESET ERROR]", repr(e))
         raise HTTPException(status_code=500, detail=str(e) or "Reset password failed")
-
 
 @router.get("/api/auth/me", response_model=MeResponse)
 def me(request: Request, authorization: str | None = Header(None)):
@@ -186,13 +190,11 @@ def me(request: Request, authorization: str | None = Header(None)):
         token = authorization.split(" ", 1)[1]
     if not token:
         raise HTTPException(status_code=401, detail="Unauthenticated")
-    # cố dùng SDK, nếu lỗi thì decode JWT để vẫn trả được user cơ bản
     try:
         res = _get_user_by_jwt_using_sdk(token)
         if res and getattr(res, "user", None):
             u = res.user
             return MeResponse(id=u.id, email=u.email, user_metadata=u.user_metadata or {})
-        # fallback
         payload = _decode_jwt_payload(token)
         uid = payload.get("sub") or payload.get("user_id") or "unknown"
         email = payload.get("email") or "unknown@example.com"
@@ -210,11 +212,9 @@ def exchange_session(body: ExchangeBody, response: Response):
     if not body.access_token:
         raise HTTPException(status_code=400, detail="Missing access token")
     try:
-        # Không gọi SDK nữa: set cookie trực tiếp, decode JWT để trả user
         set_session_cookies(response, body.access_token, body.refresh_token)
         payload = _decode_jwt_payload(body.access_token)
         if not payload:
-            # nếu decode lỗi, vẫn set cookie nhưng thông báo hợp lệ
             raise HTTPException(status_code=401, detail="Invalid access token")
         uid = payload.get("sub") or payload.get("user_id") or "unknown"
         email = payload.get("email") or "unknown@example.com"
