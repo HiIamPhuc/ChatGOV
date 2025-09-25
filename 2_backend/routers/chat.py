@@ -2,6 +2,7 @@ import uuid
 from fastapi import APIRouter, HTTPException, Body
 from fastapi.responses import StreamingResponse
 from .requests import StartSessionRequest, ChatRequest
+from .profile import _select_profile, _skeleton
 from ..database import get_user, save_user, get_session, save_session, serialize_chat_history, deserialize_chat_history
 from ..graph import compile_graph, ChatState
 from ..models import Session, User
@@ -35,22 +36,11 @@ async def chat(request: ChatRequest = Body(...)):
     if not session_data:
         raise HTTPException(status_code=404, detail="Session not found")
     
-    # # Get user profile for personalization
-    # user = get_user(session_data.user_id)
-    # if not user:
-    #     raise HTTPException(status_code=404, detail="User not found")
-    # user_profile = user.user_profile()
-
-    user_profile_mock = {
-        "Họ và tên": "Nguyễn Văn A",
-        "Tuổi": 30,
-        "Thành phố": "Hà Nội",
-        "email": "example@gmail.com",
-        "Số điện thoại": "0123456789",
-        "Ngày sinh": "01/01/1990",
-        "Giới tính": "Nam",
-    }
-    user_profile = user_profile_mock
+    # Get user profile for personalization using the profile module
+    try:
+        user_profile = _select_profile(session_data.user_id)
+    except:
+        user_profile = {}
     
     graph = compile_graph()
     
@@ -61,20 +51,7 @@ async def chat(request: ChatRequest = Body(...)):
         "messages": chat_history + [user_message],
         "user_profile": user_profile
     }
-    # final_state = []
-    # for step in graph.stream(initial_state, stream_mode="values"):
-    #     final_state = step
-    
-    # if not final_state:
-    #     raise HTTPException(status_code=500, detail="Graph execution failed")
-    
-    # ai_response = final_state["messages"][-1].content if final_state["messages"][-1].type == "ai" else "No response generated."
-    
-    # # Update and save chat history
-    # session_data.chat_history = serialize_chat_history(final_state["messages"])
-    # save_session(session_data)
-    
-    # return {"response": ai_response}
+
     async def stream_response():
         final_state = None
         async for step in graph.astream(initial_state, stream_mode="values"):
