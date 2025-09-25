@@ -92,7 +92,7 @@ const Outer = styled.div`
   .box {
     display: grid;
     grid-template-columns: 1fr auto; /* mặc định: cùng hàng */
-    align-items: end;
+    align-items: center;
     column-gap: 10px;
     row-gap: 8px;
 

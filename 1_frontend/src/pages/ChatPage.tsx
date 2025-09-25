@@ -4,10 +4,13 @@ import PromptInput from "@/components/common/chat/PromptInput";
 import ChatMessage from "@/components/common/chat/ChatMessage";
 import LoaderTyping from "@/components/common/loaders/LoaderTyping";
 import { useI18n } from "@/app/i18n";
+import { me } from "@/services/auth";
+import { startSession, streamChat, getHistory } from "@/services/sessions";
+import { useLocation, useNavigate } from "react-router-dom";
 
 type Msg = { id: string; role: "user" | "assistant"; content: string };
 
-const SCROLL_DURATION_MS = 900; // chỉnh tốc độ scroll
+const SCROLL_DURATION_MS = 900;
 const easeInOut = (t: number) =>
   t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
 
@@ -22,14 +25,62 @@ export default function ChatPage() {
   const [unread, setUnread] = useState(0);
 
   const animIdRef = useRef<number | null>(null);
-  const prevTopRef = useRef<number>(0); // để nhận biết kéo lên
+  const prevTopRef = useRef<number>(0);
 
-  // theo dõi chiều cao footer để đặt vị trí nút jump & padding-bottom
   const footerRef = useRef<HTMLDivElement | null>(null);
-  const [footerH, setFooterH] = useState<number>(120); // fallback ban đầu
+  const [footerH, setFooterH] = useState<number>(120);
 
   const { t } = useI18n();
   const isEmpty = messages.length === 0;
+
+  // session & user
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const location = useLocation() as any;
+  const nav = useNavigate();
+
+  // --- Lấy user id
+  useEffect(() => {
+    me().then((u) => setUserId(u.id)).catch(() => {});
+  }, []);
+
+  // --- Detect "new chat" bằng ?new=1 -> reset
+  useEffect(() => {
+    const sp = new URLSearchParams(location.search || "");
+    if (sp.get("new") === "1") {
+      setSessionId(null);
+      setMessages([]);
+      // cleanup trạng thái active đã lưu
+      sessionStorage.removeItem("activeSessionId");
+      // bỏ ?new=1 khỏi url (đẹp URL)
+      nav(location.pathname, { replace: true });
+      // scroll to bottom sau reset
+      requestAnimationFrame(() => scrollToBottom(true));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.search]);
+
+  // --- Nhận sessionId từ location.state khi chọn session
+  useEffect(() => {
+    const sid = location?.state?.sessionId as string | undefined;
+    if (sid && sid !== sessionId) {
+      setSessionId(sid);
+      sessionStorage.setItem("activeSessionId", sid);
+      getHistory(sid)
+        .then(({ messages }) =>
+          setMessages(
+            messages.map((m) => ({
+              id: crypto.randomUUID(),
+              role: m.role,
+              content: m.content,
+            }))
+          )
+        )
+        .catch(() => {});
+      requestAnimationFrame(() => scrollToBottom(true));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location?.state?.sessionId]);
 
   const cancelAnim = () => {
     if (animIdRef.current) cancelAnimationFrame(animIdRef.current);
@@ -45,7 +96,6 @@ export default function ChatPage() {
     const startTime = performance.now();
 
     const step = (now: number) => {
-      // mục tiêu luôn cập nhật để theo kịp nội dung đang nở ra
       const target = el.scrollHeight - el.clientHeight;
       const t = Math.min(1, (now - startTime) / duration);
       el.scrollTop = startTop + (target - startTop) * easeInOut(t);
@@ -57,10 +107,8 @@ export default function ChatPage() {
       }
     };
 
-    // double-rAF để chắc chắn layout xong
     requestAnimationFrame(() =>
       requestAnimationFrame(() => {
-        // cập nhật prevTopRef để onScroll không hiểu nhầm là người dùng kéo lên
         prevTopRef.current = el.scrollTop;
         step(performance.now());
       })
@@ -96,7 +144,6 @@ export default function ChatPage() {
     else if (messages.length) setUnread((n) => n + 1);
   }, [messages, typing]);
 
-  // nội dung nở ra (markdown, ảnh…) bám đuôi
   useEffect(() => {
     if (!innerRef.current) return;
     const ro = new ResizeObserver(() => {
@@ -106,12 +153,10 @@ export default function ChatPage() {
     return () => ro.disconnect();
   }, [autoFollow]);
 
-  // quan sát chiều cao footer (PromptInput) để cập nhật CSS var
   useEffect(() => {
     if (!footerRef.current) return;
     const ro = new ResizeObserver((entries) => {
-      const h =
-        entries[0]?.contentRect?.height || footerRef.current!.offsetHeight;
+      const h = entries[0]?.contentRect?.height || footerRef.current!.offsetHeight;
       setFooterH(Math.round(h));
     });
     ro.observe(footerRef.current);
@@ -126,10 +171,9 @@ export default function ChatPage() {
     const deltaToBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
     const atBottom = deltaToBottom < threshold;
 
-    // phát hiện người dùng kéo lên => huỷ animation, tắt autofollow
     const prevTop = prevTopRef.current;
     const nowTop = el.scrollTop;
-    const userScrolledUp = nowTop < prevTop - 1; // -1 để tránh nhiễu
+    const userScrolledUp = nowTop < prevTop - 1;
     prevTopRef.current = nowTop;
 
     if (userScrolledUp) {
@@ -145,38 +189,55 @@ export default function ChatPage() {
     scrollToBottom(false);
   };
 
+  // ---------------------- SEND & STREAM ----------------------
   const onSend = async (p: { prompt: string; rootUrl?: string }) => {
+    if (!p?.prompt?.trim()) return;
     setTyping(true);
-    // mock response
-    const demo: Msg[] = [
-      { id: crypto.randomUUID(), role: "user", content: p.prompt },
-      {
-        id: crypto.randomUUID(),
-        role: "assistant",
-        content: `**Hướng dẫn nộp hồ sơ trực tuyến** cho dịch vụ: *Cấp lại CCCD*.
 
-<!--steps:["Truy cập Cổng Dịch vụ công quốc gia.","Đăng nhập/đăng ký tài khoản công dân.","Tìm dịch vụ 'Cấp lại Căn cước công dân'.","Điền mẫu đơn, tải lên giấy tờ yêu cầu.","Xác nhận, ký số (nếu có) và nộp hồ sơ.","Theo dõi trạng thái trong mục Hồ sơ của tôi."]-->
+    try {
+      // 1) Tạo session nếu đang new chat
+      let sid = sessionId;
+      if (!sid) {
+        if (!userId) {
+          setTyping(false);
+          return;
+        }
+        const s = await startSession(userId);
+        sid = s.session_id;
+        setSessionId(sid);
+        // set active cho sidebar + replace state để highlight
+        sessionStorage.setItem("activeSessionId", sid);
+        nav(location.pathname, { state: { ...location.state, sessionId: sid }, replace: true });
+      }
 
-👉 Liên kết: https://dichvucong.gov.vn/p/home/dvc-trang-chu.html
+      // 2) cập nhật UI ngay
+      const uid = crypto.randomUUID();
+      const aid = crypto.randomUUID();
+      setMessages((prev) => [
+        ...prev,
+        { id: uid, role: "user", content: p.prompt },
+        { id: aid, role: "assistant", content: "" },
+      ]);
 
-- **Phí xử lý:** 50.000đ (tham khảo)
-- **Thời gian dự kiến:** 7–10 ngày làm việc
-
-> Lưu ý: Thông tin chỉ mang tính demo. Khi tích hợp backend, nội dung sẽ do LLM trả về.`,
-      },
-    ];
-    setMessages((prev) => prev.concat(demo));
-    setTyping(false);
+      // 3) stream SSE
+      let acc = "";
+      await streamChat(sid!, p.prompt, (token) => {
+        acc += token;
+        setMessages((prev) =>
+          prev.map((m) => (m.id === aid ? { ...m, content: acc } : m))
+        );
+      });
+    } finally {
+      setTyping(false);
+    }
   };
+  // -----------------------------------------------------------
 
   return (
-    // đẩy CSS var --footer-h xuống styled
     <Main style={{ ["--footer-h" as any]: `${footerH}px` }}>
       {isEmpty ? (
         <div className="home">
-          <h1 className="hero">
-            {t("heroTitle") ?? "Bạn đang cần hỗ trợ gì?"}
-          </h1>
+          <h1 className="hero">{t("heroTitle") ?? "Bạn đang cần hỗ trợ gì?"}</h1>
           <div className="heroComposer">
             <PromptInput onSend={onSend} maxWidth={720} compact />
           </div>
@@ -185,9 +246,12 @@ export default function ChatPage() {
         <>
           <div className="scroll" ref={scrollRef} onScroll={onScroll}>
             <div className="inner" ref={innerRef}>
-              {messages.map((m) => (
-                <ChatMessage key={m.id} msg={m} />
-              ))}
+              {messages.map((m, i) => {
+                const isLast = i === messages.length - 1;
+                const isAssistant = m.role === "assistant";
+                const done = !(isLast && isAssistant && typing);
+                return <ChatMessage key={m.id} msg={m as any} done={done} />;
+              })}
               {typing && (
                 <div className="typing">
                   <LoaderTyping />
@@ -220,8 +284,7 @@ export default function ChatPage() {
           <footer className="input" ref={footerRef}>
             <PromptInput onSend={onSend} maxWidth={820} />
             <p className="disclaimer">
-              {t("chatDisclaimer") ||
-                "ChatGPT can make mistakes. Check important info."}
+              {t("chatDisclaimer") || "ChatGPT can make mistakes. Check important info."}
             </p>
           </footer>
         </>
@@ -250,104 +313,41 @@ const Main = styled.div`
     text-align: center;
     color: ${({ theme }) => theme.colors.accent2};
   }
-  .heroComposer {
-    width: 100%;
-    display: flex;
-    justify-content: center;
-  }
+  .heroComposer { width: 100%; display: flex; justify-content: center; }
 
-  .scroll {
-    flex: 1;
-    overflow: auto;
-    padding: 18px;
-    /* padding-bottom dựa trên chiều cao footer */
-    padding-bottom: calc(var(--footer-h, 120px) + 24px);
-  }
-  .inner {
-    max-width: 920px;
-    margin: 0 auto;
-  }
-  .typing {
-    padding: 10px 0;
-  }
+  .scroll { flex: 1; overflow: auto; padding: 18px; padding-bottom: calc(var(--footer-h, 120px) + 24px); }
+  .inner { max-width: 920px; margin: 0 auto; }
+  .typing { padding: 10px 0; }
 
   .input {
-    position: sticky;
-    bottom: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    padding: 0 18px 10px;
-    background: transparent;
-    border-top: 1px solid transparent;
-    z-index: 2;
+    position: sticky; bottom: 0;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    padding: 0 18px 10px; background: transparent; border-top: 1px solid transparent; z-index: 2;
   }
-  .disclaimer {
-    margin: 2px 0 6px;
-    font-size: 12px;
-    color: ${({ theme }) => theme.colors.secondary};
-    text-align: center;
-  }
+  .disclaimer { margin: 2px 0 6px; font-size: 12px; color: ${({ theme }) => theme.colors.secondary}; text-align: center; }
 
   .jump {
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-    /* luôn nằm trên PromptInput */
+    position: absolute; left: 50%; transform: translateX(-50%);
     bottom: calc(var(--footer-h, 120px) + 12px);
-    width: 40px;
-    height: 40px;
-    border-radius: 999px;
+    width: 40px; height: 40px; border-radius: 999px;
     border: 1px solid ${({ theme }) => theme.colors.border};
-    display: grid;
-    place-items: center;
-    color: #fff;
-    background: linear-gradient(
-      90deg,
-      ${({ theme }) => theme.colors.accent},
-      ${({ theme }) => theme.colors.accent2}
-    );
+    display: grid; place-items: center; color: #fff;
+    background: linear-gradient(90deg, ${({ theme }) => theme.colors.accent}, ${({ theme }) => theme.colors.accent2});
     box-shadow: 0 10px 24px rgba(206, 122, 88, 0.25);
-    cursor: pointer;
-    transition: filter 0.15s, transform 0.15s;
-    z-index: 3;
+    cursor: pointer; transition: filter 0.15s, transform 0.15s; z-index: 3;
   }
-  .jump:hover {
-    filter: brightness(0.96);
-  }
-  .jump:active {
-    transform: translateX(-50%) scale(0.98);
-  }
+  .jump:hover { filter: brightness(0.96); }
+  .jump:active { transform: translateX(-50%) scale(0.98); }
   .jump .badge {
-    position: absolute;
-    top: -6px;
-    right: -6px;
-    min-width: 18px;
-    height: 18px;
-    padding: 0 5px;
-    border-radius: 999px;
-    background: #fff;
-    color: ${({ theme }) => theme.colors.accent2};
-    font-size: 11px;
-    font-weight: 800;
-    border: 1px solid ${({ theme }) => theme.colors.border};
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+    position: absolute; top: -6px; right: -6px; min-width: 18px; height: 18px; padding: 0 5px;
+    border-radius: 999px; background: #fff; color: ${({ theme }) => theme.colors.accent2};
+    font-size: 11px; font-weight: 800; border: 1px solid ${({ theme }) => theme.colors.border};
+    display: inline-flex; align-items: center; justify-content: center;
   }
 
-  .scroll::-webkit-scrollbar {
-    width: 12px;
-  }
+  .scroll::-webkit-scrollbar { width: 12px; }
   .scroll::-webkit-scrollbar-thumb {
-    background: #d0d0d0;
-    border-radius: 10px;
-    border: 3px solid transparent;
-    background-clip: content-box;
+    background: #d0d0d0; border-radius: 10px; border: 3px solid transparent; background-clip: content-box;
   }
-  .scroll {
-    scrollbar-width: thin;
-    scrollbar-color: #d0d0d0 transparent;
-  }
+  .scroll { scrollbar-width: thin; scrollbar-color: #d0d0d0 transparent; }
 `;

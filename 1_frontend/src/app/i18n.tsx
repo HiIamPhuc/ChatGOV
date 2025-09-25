@@ -39,6 +39,8 @@ const DICTS: Record<Lang, Dict> = {
     more: "More",
     rename: "Rename",
     delete: "Delete",
+    confirmDelete: "Delete this session?",
+    search: "Search",
 
     // App
     addLink: "Add website link",
@@ -141,6 +143,8 @@ const DICTS: Record<Lang, Dict> = {
     more: "Thêm tuỳ chọn",
     rename: "Đổi tên",
     delete: "Xoá",
+    confirmDelete: "Xóa phiên này?",
+    search: "Tìm kiếm",
 
     // App
     addLink: "Thêm link website",
