@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import styled from "styled-components";
 import type { ChatSession } from "@/services/sessions";
 import { useI18n } from "@/app/i18n";
@@ -10,7 +10,12 @@ type Props = {
   onChoose: (sessionId: string) => void;
 };
 
-export default function SearchSessionsModal({ open, onClose, sessions, onChoose }: Props) {
+export default function SearchSessionsModal({
+  open,
+  onClose,
+  sessions,
+  onChoose,
+}: Props) {
   const { t } = useI18n();
   const [q, setQ] = useState("");
 
@@ -37,7 +42,9 @@ export default function SearchSessionsModal({ open, onClose, sessions, onChoose 
             value={q}
             onChange={(e) => setQ(e.target.value)}
           />
-          <button onClick={onClose} aria-label="Đóng">✕</button>
+          <button onClick={onClose} aria-label="Đóng">
+            ✕
+          </button>
         </Header>
         <Body>
           {Object.entries(groups).map(([label, items]) => (
@@ -50,7 +57,10 @@ export default function SearchSessionsModal({ open, onClose, sessions, onChoose 
                 <div
                   className="row"
                   key={s.session_id}
-                  onClick={() => { onChoose(s.session_id); onClose(); }}
+                  onClick={() => {
+                    onChoose(s.session_id);
+                    onClose();
+                  }}
                 >
                   <div className="title">{s.title || "New chat"}</div>
                   <div className="preview">{S(s.last_message_preview)}</div>
@@ -70,20 +80,25 @@ export default function SearchSessionsModal({ open, onClose, sessions, onChoose 
 function groupByTime(items: ChatSession[]): Record<string, ChatSession[]> {
   const out: Record<string, ChatSession[]> = {};
   const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const today = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate()
+  ).getTime();
   const oneDay = 86400000;
-  const startOf = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const startOf = (d: Date) =>
+    new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
 
   for (const s of items) {
     const u = s.updated_at || s.created_at || "";
     let time = Date.parse(u);
     if (!isFinite(time)) time = Date.now();
     const day = startOf(new Date(time));
-    let bucket = "Older";
-    if (day >= today) bucket = "Today";
-    else if (day >= today - oneDay) bucket = "Yesterday";
-    else if (day >= today - 7 * oneDay) bucket = "Last 7 days";
-    else if (day >= today - 30 * oneDay) bucket = "Last 30 days";
+    let bucket = "Trước đó";
+    if (day >= today) bucket = "Hôm nay";
+    else if (day >= today - oneDay) bucket = "Hôm qua";
+    else if (day >= today - 7 * oneDay) bucket = "7 ngày qua";
+    else if (day >= today - 30 * oneDay) bucket = "30 ngày qua";
     (out[bucket] ||= []).push(s);
   }
   for (const k of Object.keys(out)) {
@@ -99,24 +114,31 @@ function groupByTime(items: ChatSession[]): Record<string, ChatSession[]> {
 const S = (s?: string | null) => (s ? s : "");
 
 const Overlay = styled.div`
-  position: fixed; inset: 0; 
-  background: rgba(144, 57, 56, .18); /* accent2 tint */
+  position: fixed;
+  inset: 0;
+  background: rgba(144, 57, 56, 0.18); /* accent2 tint */
   backdrop-filter: blur(2px);
-  display: grid; place-items: center; z-index: 50;
+  display: grid;
+  place-items: center;
+  z-index: 50;
 `;
 
 const Card = styled.div`
-  width: min(920px, 94vw); height: min(80vh, 700px);
+  width: min(920px, 94vw);
+  height: min(80vh, 700px);
   background: ${({ theme }) => theme.colors.surface};
   color: ${({ theme }) => theme.colors.primary};
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: ${({ theme }) => theme.radii.lg};
   box-shadow: ${({ theme }) => theme.shadow};
-  display: grid; grid-template-rows: auto 1fr;
+  display: grid;
+  grid-template-rows: auto 1fr;
 `;
 
 const Header = styled.div`
-  display: flex; gap: 10px; padding: 14px;
+  display: flex;
+  gap: 10px;
+  padding: 14px;
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
 
   input {
@@ -125,15 +147,19 @@ const Header = styled.div`
     border: 1px solid ${({ theme }) => theme.colors.border};
     color: ${({ theme }) => theme.colors.primary};
     border-radius: ${({ theme }) => theme.radii.md};
-    padding: 10px 12px; outline: none;
-    transition: border-color .12s ease, box-shadow .12s ease;
+    padding: 10px 12px;
+    outline: none;
+    transition: border-color 0.12s ease, box-shadow 0.12s ease;
   }
   input:focus {
     border-color: ${({ theme }) => theme.colors.accent};
-    box-shadow: 0 0 0 3px rgba(206,122,88,.16);
+    box-shadow: 0 0 0 3px rgba(206, 122, 88, 0.16);
   }
   button {
-    min-width: 36px; height: 36px; border-radius: 10px; cursor: pointer;
+    min-width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    cursor: pointer;
     border: 1px solid ${({ theme }) => theme.colors.border};
     background: ${({ theme }) => theme.colors.surface2};
     color: ${({ theme }) => theme.colors.secondary};
@@ -141,42 +167,71 @@ const Header = styled.div`
   button:hover {
     color: ${({ theme }) => theme.colors.accent2};
     border-color: ${({ theme }) => theme.colors.accent};
-    background: rgba(206,122,88,.10);
+    background: rgba(206, 122, 88, 0.1);
   }
 `;
 
 const Body = styled.div`
-  overflow: auto; padding: 10px 12px;
+  overflow: auto;
+  padding: 10px 12px;
 
-  .group { padding: 8px 4px; }
-  .gtitle { 
-    display: flex; align-items: center; gap: 8px;
-    font-size: 12px; color: ${({ theme }) => theme.colors.secondary};
-    padding: 6px 8px; text-transform: uppercase; letter-spacing: .8px;
+  .group {
+    padding: 8px 4px;
+  }
+  .gtitle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: ${({ theme }) => theme.colors.secondary};
+    padding: 6px 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
   }
   .gtitle em {
-    font-style: normal; font-weight: 700; font-size: 11px;
+    font-style: normal;
+    font-weight: 700;
+    font-size: 11px;
     color: ${({ theme }) => theme.colors.accent2};
     background: ${({ theme }) => theme.colors.surface2};
     border: 1px solid ${({ theme }) => theme.colors.border};
-    padding: 2px 6px; border-radius: 999px;
+    padding: 2px 6px;
+    border-radius: 999px;
   }
 
   .row {
-    padding: 10px 12px; border-radius: ${({ theme }) => theme.radii.md};
-    cursor: pointer; border: 1px solid transparent;
-    transition: background .12s ease, border-color .12s ease, transform .06s ease;
+    padding: 10px 12px;
+    border-radius: ${({ theme }) => theme.radii.md};
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: background 0.12s ease, border-color 0.12s ease,
+      transform 0.06s ease;
   }
   .row:hover {
     background: ${({ theme }) => theme.colors.surface2};
     border-color: ${({ theme }) => theme.colors.border};
   }
-  .row:active { transform: scale(.997); }
+  .row:active {
+    transform: scale(0.997);
+  }
 
-  .title { font-weight: 700; margin-bottom: 4px; color: ${({ theme }) => theme.colors.primary}; }
-  .preview { color: ${({ theme }) => theme.colors.secondary}; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .title {
+    font-weight: 700;
+    margin-bottom: 4px;
+    color: ${({ theme }) => theme.colors.primary};
+  }
+  .preview {
+    color: ${({ theme }) => theme.colors.secondary};
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 `;
 
 const Empty = styled.div`
-  opacity: .8; text-align: center; padding: 18px; color: ${({ theme }) => theme.colors.secondary};
+  opacity: 0.8;
+  text-align: center;
+  padding: 18px;
+  color: ${({ theme }) => theme.colors.secondary};
 `;

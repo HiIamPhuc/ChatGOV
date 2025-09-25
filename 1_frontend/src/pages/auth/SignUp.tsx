@@ -1,6 +1,6 @@
 import { useState } from "react";
 import styled from "styled-components";
-import { register } from "@/services/auth"; 
+import { register } from "@/services/auth";
 import SignupForm from "@/components/forms/SignupForm";
 import { Link, useNavigate } from "react-router-dom";
 import LoaderPage from "@/components/common/loaders/LoaderPage";
@@ -17,7 +17,15 @@ export default function SignUp() {
   const { notify } = useToast();
   const { t } = useI18n();
 
-  const submit = async ({ email, password, fullName }: { email: string; password: string; fullName: string; }) => {
+  const submit = async ({
+    email,
+    password,
+    fullName,
+  }: {
+    email: string;
+    password: string;
+    fullName: string;
+  }) => {
     setLoading(true);
     try {
       await register(email, password, fullName);

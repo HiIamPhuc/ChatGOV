@@ -25,11 +25,16 @@ export default function ResetPassword() {
 
   useEffect(() => {
     const url = new URL(window.location.href);
-    const hashParams = new URLSearchParams((window.location.hash || "").replace(/^#/, ""));
+    const hashParams = new URLSearchParams(
+      (window.location.hash || "").replace(/^#/, "")
+    );
     const qParams = url.searchParams;
 
-    const type =
-      (hashParams.get("type") || qParams.get("type") || "").toLowerCase();
+    const type = (
+      hashParams.get("type") ||
+      qParams.get("type") ||
+      ""
+    ).toLowerCase();
     const token =
       hashParams.get("access_token") || qParams.get("access_token") || "";
 
@@ -42,7 +47,8 @@ export default function ResetPassword() {
     // Không có token hợp lệ -> quay về /signin
     notify({
       title: t("error"),
-      content: t("missingOrInvalidResetToken") || "Missing or invalid reset token",
+      content:
+        t("missingOrInvalidResetToken") || "Missing or invalid reset token",
       tone: "error",
     });
     nav("/signin");
@@ -51,11 +57,19 @@ export default function ResetPassword() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (pw.length < 8) {
-      notify({ title: t("error"), content: t("passwordTooShort"), tone: "error" });
+      notify({
+        title: t("error"),
+        content: t("passwordTooShort"),
+        tone: "error",
+      });
       return;
     }
     if (pw !== pw2) {
-      notify({ title: t("error"), content: t("confirmPassword"), tone: "error" });
+      notify({
+        title: t("error"),
+        content: t("confirmPassword"),
+        tone: "error",
+      });
       return;
     }
 
@@ -85,8 +99,20 @@ export default function ResetPassword() {
       <section className="container">
         <header>{t("setNewPassword")}</header>
         <form className="form" onSubmit={submit}>
-          <PwField label={t("newPassword")} value={pw} onChange={setPw} autoComplete="new-password" required />
-          <PwField label={t("confirmPassword")} value={pw2} onChange={setPw2} autoComplete="new-password" required />
+          <PwField
+            label={t("newPassword")}
+            value={pw}
+            onChange={setPw}
+            autoComplete="new-password"
+            required
+          />
+          <PwField
+            label={t("confirmPassword")}
+            value={pw2}
+            onChange={setPw2}
+            autoComplete="new-password"
+            required
+          />
           <Button type="submit" wfull size="md" disabled={loading}>
             {t("updatePassword")}
           </Button>

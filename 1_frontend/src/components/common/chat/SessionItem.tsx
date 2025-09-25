@@ -12,7 +12,12 @@ type Props = {
   onDelete?: () => void;
 };
 
-type Pos = { top: number; left: number; arrowTop: number; side: "left" | "right" };
+type Pos = {
+  top: number;
+  left: number;
+  arrowTop: number;
+  side: "left" | "right";
+};
 
 export default function SessionItem({
   title,
@@ -25,7 +30,7 @@ export default function SessionItem({
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<Pos | null>(null);
 
-  const rowBtnRef = useRef<HTMLDivElement | null>(null);    // ← div thay vì button
+  const rowBtnRef = useRef<HTMLDivElement | null>(null);
   const dotsRef = useRef<HTMLButtonElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
@@ -108,7 +113,12 @@ export default function SessionItem({
       data-side={pos?.side || "left"}
       style={
         pos
-          ? { top: pos.top, left: pos.left, visibility: "visible", ["--arrow-top" as any]: `${pos.arrowTop}px` }
+          ? {
+              top: pos.top,
+              left: pos.left,
+              visibility: "visible",
+              ["--arrow-top" as any]: `${pos.arrowTop}px`,
+            }
           : { visibility: "hidden", top: 0, left: 0 }
       }
       onClick={(e) => e.stopPropagation()}
@@ -157,7 +167,6 @@ export default function SessionItem({
         <span className="accent" aria-hidden />
         <span className="tx">{title}</span>
 
-        {/* nút 3 chấm tách riêng → KHÔNG lồng button trong button */}
         <button
           ref={dotsRef}
           className="dots"
@@ -221,7 +230,9 @@ const Row = styled.div<{ $active: boolean }>`
     background: rgba(255, 255, 255, 0.9);
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
   }
-  .rowBtn:hover .accent { opacity: 0.4; }
+  .rowBtn:hover .accent {
+    opacity: 0.4;
+  }
 
   ${({ $active, theme }) =>
     $active &&
@@ -286,18 +297,37 @@ const MenuWrap = styled.div`
     color: ${({ theme }) => theme.colors.primary};
     transition: background 0.15s ease, transform 0.08s ease;
   }
-  .item:hover { background: rgba(0,0,0,0.05); transform: translateX(1px); }
+  .item:hover {
+    background: rgba(0, 0, 0, 0.05);
+    transform: translateX(1px);
+  }
 
-  .ic { width: 16px; height: 16px; color: ${({ theme }) => theme.colors.secondary}; display: grid; place-items: center; }
+  .ic {
+    width: 16px;
+    height: 16px;
+    color: ${({ theme }) => theme.colors.secondary};
+    display: grid;
+    place-items: center;
+  }
 
-  .sep { height: 1px; margin: 6px 6px; background: ${({ theme }) => theme.colors.border}; opacity: .9; border-radius: 1px; }
+  .sep {
+    height: 1px;
+    margin: 6px 6px;
+    background: ${({ theme }) => theme.colors.border};
+    opacity: 0.9;
+    border-radius: 1px;
+  }
 
-  .danger, .item.danger .ic { color: ${({ theme }) => theme.colors.danger}; }
+  .danger,
+  .item.danger .ic {
+    color: ${({ theme }) => theme.colors.danger};
+  }
 
   .arrow {
     position: absolute;
     top: var(--arrow-top, 10px);
-    width: 12px; height: 12px;
+    width: 12px;
+    height: 12px;
     background: inherit;
     transform: rotate(45deg);
     pointer-events: none;
@@ -305,6 +335,13 @@ const MenuWrap = styled.div`
     border-top: 1px solid ${({ theme }) => theme.colors.border};
     border-radius: 2px 0 0 0;
   }
-  &[data-side="left"] .arrow { left: -6px; right: auto; }
-  &[data-side="right"] .arrow { right: -6px; left: auto; transform: rotate(225deg); }
+  &[data-side="left"] .arrow {
+    left: -6px;
+    right: auto;
+  }
+  &[data-side="right"] .arrow {
+    right: -6px;
+    left: auto;
+    transform: rotate(225deg);
+  }
 `;

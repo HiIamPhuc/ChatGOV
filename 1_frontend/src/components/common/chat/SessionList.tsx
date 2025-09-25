@@ -10,11 +10,15 @@ type Props = {
   onDelete?: (id: string) => void;
 };
 
-export default function SessionList({ items, onSelect, onRename, onDelete }: Props) {
+export default function SessionList({
+  items,
+  onSelect,
+  onRename,
+  onDelete,
+}: Props) {
   if (!items?.length) return <Empty className="empty">Chưa có phiên nào</Empty>;
   return (
     <Wrap>
-      {/* DANH SÁCH: KHÔNG đặt overflow ở đây nữa; để parent (.sessionsArea) cuộn */}
       <div className="list">
         {items.map((s) => (
           <SessionItem

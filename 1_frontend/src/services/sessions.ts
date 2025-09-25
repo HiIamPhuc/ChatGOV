@@ -1,4 +1,3 @@
-// src/services/sessions.ts
 import { api } from "@/utils/http";
 
 export type ChatSession = {
@@ -22,14 +21,18 @@ function normalizeRole(raw?: string | null): "user" | "assistant" {
 }
 
 export async function listSessions(userId: string): Promise<ChatSession[]> {
-  const { data } = await api.get("/api/chat/sessions", { params: { user_id: userId } });
+  const { data } = await api.get("/api/chat/sessions", {
+    params: { user_id: userId },
+  });
   return data;
 }
 
 export async function getHistory(
   sessionId: string
 ): Promise<{ session_id: string; messages: ChatMessage[] }> {
-  const { data } = await api.get("/api/chat/history", { params: { session_id: sessionId } });
+  const { data } = await api.get("/api/chat/history", {
+    params: { session_id: sessionId },
+  });
 
   // Chỉ giữ các message hiển thị được (user/human và assistant/ai không có tool_calls)
   const filtered = filterDisplayableMessages(data?.messages || []);
@@ -43,25 +46,34 @@ export async function getHistory(
   return { session_id: data?.session_id, messages: norm };
 }
 
-export async function renameSession(sessionId: string, title: string): Promise<void> {
-  await api.put(`/api/chat/sessions/${encodeURIComponent(sessionId)}/title`, { title });
+export async function renameSession(
+  sessionId: string,
+  title: string
+): Promise<void> {
+  await api.put(`/api/chat/sessions/${encodeURIComponent(sessionId)}/title`, {
+    title,
+  });
 }
 
-export async function deleteSession(sessionId: string, userId: string): Promise<void> {
+export async function deleteSession(
+  sessionId: string,
+  userId: string
+): Promise<void> {
   await api.delete(`/api/chat/sessions/${encodeURIComponent(sessionId)}`, {
     params: { user_id: userId },
   });
 }
 
-export async function startSession(userId: string): Promise<{ session_id: string }> {
-  const { data } = await api.post("/api/chat/start_session", { user_id: userId });
+export async function startSession(
+  userId: string
+): Promise<{ session_id: string }> {
+  const { data } = await api.post("/api/chat/start_session", {
+    user_id: userId,
+  });
   return data;
 }
 
-/* -------------------------------------------------------------
-   Display helpers: lọc message hiển thị & chuẩn hoá content
-------------------------------------------------------------- */
-
+/* helpers: lọc message hiển thị & chuẩn hoá content */
 /** Lấy text hiển thị từ nhiều kiểu content khác nhau (string / array parts / object). */
 function toPlainText(val: any): string {
   if (typeof val === "string") return val;
@@ -100,32 +112,38 @@ function filterDisplayableMessages(raw: any[]): any[] {
     const isAssistant = role === "assistant" || role === "ai";
 
     const emptyToolCalls =
-      !m?.tool_calls || (Array.isArray(m.tool_calls) && m.tool_calls.length === 0);
+      !m?.tool_calls ||
+      (Array.isArray(m.tool_calls) && m.tool_calls.length === 0);
 
     const text =
-      typeof m?.content === "string" ? m.content : JSON.stringify(m?.content ?? "");
+      typeof m?.content === "string"
+        ? m.content
+        : JSON.stringify(m?.content ?? "");
     const hasText = text.trim().length > 0;
 
     return (isUser && hasText) || (isAssistant && emptyToolCalls && hasText);
   });
 }
 
-/* -------------------------------------------------------------
-   Networking helpers
-------------------------------------------------------------- */
+/* Networking helpers */
 
 function resolveApiUrl(path: string): string {
   // Lấy baseURL từ axios instance để dùng đúng proxy / host của backend
   const base = (api.defaults?.baseURL as string) || "/api";
   // base có thể là '/api' hoặc 'http://localhost:8000'
   if (/^https?:\/\//i.test(base)) {
-    // dạng tuyệt đối
-    const u = new URL(path.replace(/^\//, ""), base.endsWith("/") ? base : base + "/");
+    // dạng tuyệt đối -> dùng URL để ghép
+    const u = new URL(
+      path.replace(/^\//, ""),
+      base.endsWith("/") ? base : base + "/"
+    );
     return u.toString();
   } else {
-    // dạng tương đối -> ghép với window.location.origin (vite proxy sẽ xử lý)
+    // dạng tương đối -> ghép với window.location.origin (vite proxy xử lý)
     const prefix = base.endsWith("/") ? base.slice(0, -1) : base;
-    return `${window.location.origin}${prefix}${path.startsWith("/") ? path : `/${path}`}`;
+    return `${window.location.origin}${prefix}${
+      path.startsWith("/") ? path : `/${path}`
+    }`;
   }
 }
 
@@ -192,7 +210,7 @@ export function streamChat(
             return;
           }
 
-          // ✅ Ưu tiên JSON { delta }, fallback text
+          // Ưu tiên JSON { delta }, fallback text
           let token = "";
           try {
             const obj = JSON.parse(payload);

@@ -1,4 +1,3 @@
-// src/utils/formatError.ts
 export function formatError(e: unknown): string {
   try {
     const any = e as any;
@@ -8,7 +7,11 @@ export function formatError(e: unknown): string {
     if (Array.isArray(data?.detail)) {
       const msgs = data.detail.map((it: any) => {
         const loc = Array.isArray(it?.loc) ? it.loc.join(".") : it?.loc;
-        return it?.msg ? (loc ? `${loc}: ${it.msg}` : it.msg) : JSON.stringify(it);
+        return it?.msg
+          ? loc
+            ? `${loc}: ${it.msg}`
+            : it.msg
+          : JSON.stringify(it);
       });
       return msgs.join("\n");
     }

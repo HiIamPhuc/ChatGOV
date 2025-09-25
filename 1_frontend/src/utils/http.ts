@@ -1,4 +1,3 @@
-// frontend/src/lib/http.ts
 import axios from "axios";
 
 export const api = axios.create({
@@ -10,8 +9,7 @@ api.interceptors.response.use(
   (r) => r,
   (err) => {
     if (err?.response?.status === 401) {
-      // tùy bạn: chuyển sang /signin hay giữ nguyên
-      // window.location.href = "/signin";
+      window.location.href = "/signin"; // redirect về signin khi 401 / token hết hạn
     }
     return Promise.reject(err);
   }

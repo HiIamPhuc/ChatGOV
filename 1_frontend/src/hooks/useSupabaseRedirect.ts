@@ -6,7 +6,9 @@ import { useToast } from "@/app/toast";
 function parseSupabaseParams() {
   const url = new URL(window.location.href);
 
-  const hashParams = new URLSearchParams((window.location.hash || "").replace(/^#/, ""));
+  const hashParams = new URLSearchParams(
+    (window.location.hash || "").replace(/^#/, "")
+  );
   const queryParams = url.searchParams;
 
   const get = (key: string) =>
@@ -21,17 +23,13 @@ function parseSupabaseParams() {
   return { access, refresh, type, error, errorDescription };
 }
 
-/**
- * Dọn URL: xóa hash & query, giữ lại pathname hiện tại
- */
+/* Dọn URL: xóa hash & query, giữ lại pathname hiện tại */
 function cleanUrl() {
   const clean = window.location.pathname;
   window.history.replaceState(null, "", clean);
 }
 
-/**
- * Hook xử lý redirect từ email Supabase (signup verify / recovery)
- */
+/* Hook xử lý redirect từ email Supabase (signup verify / recovery) */
 export default function useSupabaseRedirect() {
   const once = useRef(false);
   const nav = useNavigate();
@@ -42,7 +40,8 @@ export default function useSupabaseRedirect() {
     if (once.current) return;
     once.current = true;
 
-    const { access, refresh, type, error, errorDescription } = parseSupabaseParams();
+    const { access, refresh, type, error, errorDescription } =
+      parseSupabaseParams();
 
     // Nếu Supabase trả lỗi qua URL
     if (error || errorDescription) {
@@ -51,7 +50,7 @@ export default function useSupabaseRedirect() {
         content: errorDescription || error || "Auth error",
         tone: "error",
       });
-      // Không dọn URL để bạn còn thấy lỗi nếu cần debug
+      // Không dọn URL để thấy lỗi cần debug
       return;
     }
 
@@ -76,14 +75,16 @@ export default function useSupabaseRedirect() {
           if (pathname !== "/app") nav("/app");
         }
       } catch (e: any) {
-        // Không dọn URL khi lỗi để còn thấy token trong lúc debug
+        // Không dọn URL khi lỗi để thấy token trong lúc debug
         notify({
           title: "Lỗi",
-          content: e?.response?.data?.detail || e?.message || "Exchange session failed",
+          content:
+            e?.response?.data?.detail ||
+            e?.message ||
+            "Exchange session failed",
           tone: "error",
         });
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 }

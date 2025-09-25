@@ -22,7 +22,7 @@ export default function ChatPage() {
   const innerRef = useRef<HTMLDivElement | null>(null);
 
   const [autoFollow, setAutoFollow] = useState(true);
-  const [unread, setUnread] = useState(0);
+  const [, setUnread] = useState(0);
 
   const animIdRef = useRef<number | null>(null);
   const prevTopRef = useRef<number>(0);
@@ -41,7 +41,9 @@ export default function ChatPage() {
 
   // --- Lấy user id
   useEffect(() => {
-    me().then((u) => setUserId(u.id)).catch(() => {});
+    me()
+      .then((u) => setUserId(u.id))
+      .catch(() => {});
   }, []);
 
   // --- Detect "new chat" bằng ?new=1 -> reset
@@ -156,7 +158,8 @@ export default function ChatPage() {
   useEffect(() => {
     if (!footerRef.current) return;
     const ro = new ResizeObserver((entries) => {
-      const h = entries[0]?.contentRect?.height || footerRef.current!.offsetHeight;
+      const h =
+        entries[0]?.contentRect?.height || footerRef.current!.offsetHeight;
       setFooterH(Math.round(h));
     });
     ro.observe(footerRef.current);
@@ -207,7 +210,10 @@ export default function ChatPage() {
         setSessionId(sid);
         // set active cho sidebar + replace state để highlight
         sessionStorage.setItem("activeSessionId", sid);
-        nav(location.pathname, { state: { ...location.state, sessionId: sid }, replace: true });
+        nav(location.pathname, {
+          state: { ...location.state, sessionId: sid },
+          replace: true,
+        });
       }
 
       // 2) cập nhật UI ngay
@@ -237,7 +243,9 @@ export default function ChatPage() {
     <Main style={{ ["--footer-h" as any]: `${footerH}px` }}>
       {isEmpty ? (
         <div className="home">
-          <h1 className="hero">{t("heroTitle") ?? "Bạn đang cần hỗ trợ gì?"}</h1>
+          <h1 className="hero">
+            {t("heroTitle") ?? "Bạn đang cần hỗ trợ gì?"}
+          </h1>
           <div className="heroComposer">
             <PromptInput onSend={onSend} maxWidth={720} compact />
           </div>
@@ -277,14 +285,14 @@ export default function ChatPage() {
                   strokeLinejoin="round"
                 />
               </svg>
-              {unread > 0 && <span className="badge">{unread}</span>}
             </button>
           )}
 
           <footer className="input" ref={footerRef}>
             <PromptInput onSend={onSend} maxWidth={820} />
             <p className="disclaimer">
-              {t("chatDisclaimer") || "ChatGPT can make mistakes. Check important info."}
+              {t("chatDisclaimer") ||
+                "ChatGPT can make mistakes. Check important info."}
             </p>
           </footer>
         </>
@@ -313,41 +321,85 @@ const Main = styled.div`
     text-align: center;
     color: ${({ theme }) => theme.colors.accent2};
   }
-  .heroComposer { width: 100%; display: flex; justify-content: center; }
+  .heroComposer {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+  }
 
-  .scroll { flex: 1; overflow: auto; padding: 18px; padding-bottom: calc(var(--footer-h, 120px) + 24px); }
-  .inner { max-width: 920px; margin: 0 auto; }
-  .typing { padding: 10px 0; }
+  .scroll {
+    flex: 1;
+    overflow: auto;
+    padding: 18px;
+    padding-bottom: calc(var(--footer-h, 120px) + 24px);
+  }
+  .inner {
+    max-width: 920px;
+    margin: 0 auto;
+  }
+  .typing {
+    padding: 10px 0;
+  }
 
   .input {
-    position: sticky; bottom: 0;
-    display: flex; flex-direction: column; align-items: center; gap: 8px;
-    padding: 0 18px 10px; background: transparent; border-top: 1px solid transparent; z-index: 2;
+    position: sticky;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 0 18px 10px;
+    background: transparent;
+    border-top: 1px solid transparent;
+    z-index: 2;
   }
-  .disclaimer { margin: 2px 0 6px; font-size: 12px; color: ${({ theme }) => theme.colors.secondary}; text-align: center; }
+  .disclaimer {
+    margin: 2px 0 6px;
+    font-size: 12px;
+    color: ${({ theme }) => theme.colors.secondary};
+    text-align: center;
+  }
 
   .jump {
-    position: absolute; left: 50%; transform: translateX(-50%);
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
     bottom: calc(var(--footer-h, 120px) + 12px);
-    width: 40px; height: 40px; border-radius: 999px;
+    width: 40px;
+    height: 40px;
+    border-radius: 999px;
     border: 1px solid ${({ theme }) => theme.colors.border};
-    display: grid; place-items: center; color: #fff;
-    background: linear-gradient(90deg, ${({ theme }) => theme.colors.accent}, ${({ theme }) => theme.colors.accent2});
+    display: grid;
+    place-items: center;
+    color: #fff;
+    background: linear-gradient(
+      90deg,
+      ${({ theme }) => theme.colors.accent},
+      ${({ theme }) => theme.colors.accent2}
+    );
     box-shadow: 0 10px 24px rgba(206, 122, 88, 0.25);
-    cursor: pointer; transition: filter 0.15s, transform 0.15s; z-index: 3;
+    cursor: pointer;
+    transition: filter 0.15s, transform 0.15s;
+    z-index: 3;
   }
-  .jump:hover { filter: brightness(0.96); }
-  .jump:active { transform: translateX(-50%) scale(0.98); }
-  .jump .badge {
-    position: absolute; top: -6px; right: -6px; min-width: 18px; height: 18px; padding: 0 5px;
-    border-radius: 999px; background: #fff; color: ${({ theme }) => theme.colors.accent2};
-    font-size: 11px; font-weight: 800; border: 1px solid ${({ theme }) => theme.colors.border};
-    display: inline-flex; align-items: center; justify-content: center;
+  .jump:hover {
+    filter: brightness(0.96);
+  }
+  .jump:active {
+    transform: translateX(-50%) scale(0.98);
   }
 
-  .scroll::-webkit-scrollbar { width: 12px; }
-  .scroll::-webkit-scrollbar-thumb {
-    background: #d0d0d0; border-radius: 10px; border: 3px solid transparent; background-clip: content-box;
+  .scroll::-webkit-scrollbar {
+    width: 12px;
   }
-  .scroll { scrollbar-width: thin; scrollbar-color: #d0d0d0 transparent; }
+  .scroll::-webkit-scrollbar-thumb {
+    background: #d0d0d0;
+    border-radius: 10px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+  .scroll {
+    scrollbar-width: thin;
+    scrollbar-color: #d0d0d0 transparent;
+  }
 `;

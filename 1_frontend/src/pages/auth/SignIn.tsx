@@ -40,10 +40,14 @@ export default function SignIn() {
           <div className="links">
             <div className="row">
               <span className="muted">{t("needAccount")}</span>
-              <Link to="/signup" className="cta">{t("signup")}</Link>
+              <Link to="/signup" className="cta">
+                {t("signup")}
+              </Link>
             </div>
             <div className="row">
-              <Link to="/forgot" className="cta">{t("forgot")}</Link>
+              <Link to="/forgot" className="cta">
+                {t("forgot")}
+              </Link>
             </div>
           </div>
         </div>

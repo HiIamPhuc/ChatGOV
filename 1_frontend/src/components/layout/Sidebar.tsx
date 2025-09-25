@@ -4,7 +4,9 @@ import { logout as apiLogout, me } from "@/services/auth";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useToast } from "@/app/toast";
 import React, { useEffect, useMemo, useState } from "react";
-import SessionList, { type Session } from "@/components/common/chat/SessionList";
+import SessionList, {
+  type Session,
+} from "@/components/common/chat/SessionList";
 import {
   listSessions,
   renameSession as apiRename,
@@ -45,7 +47,9 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
   }, [activeIdFromState]);
 
   useEffect(() => {
-    me().then((u) => setUserId(u.id)).catch(() => {});
+    me()
+      .then((u) => setUserId(u.id))
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -60,7 +64,7 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
   const items: Session[] = useMemo(() => {
     return sessions.map((s) => ({
       id: s.session_id,
-      title: s.title || (t("newChat") || "New chat"),
+      title: s.title || t("newChat") || "New chat",
       active: s.session_id === activeId,
     }));
   }, [sessions, t, activeId]);
@@ -185,6 +189,16 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
           <SvgUser className="icon" />
           <span className="label">{t("profile")}</span>
         </NavBtn>
+
+        {/* <NavBtn
+          onClick={go("/settings")}
+          data-active={pathname.startsWith("/settings") ? "true" : "false"}
+          title={t("settings")}
+        >
+          <SvgSetting className="icon" />
+          <span className="label">{t("settings")}</span>
+        </NavBtn> */}
+
         <NavBtn onClick={handleLogout} title={t("logout")}>
           <SvgLogout className="icon" />
           <span className="label">{t("logout")}</span>
@@ -258,7 +272,11 @@ const Wrap = styled.aside<{ $bg: string }>`
     cursor: pointer;
     transition: opacity 0.2s;
   }
-  .logo-img { width: 100%; height: 100%; object-fit: contain; }
+  .logo-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
 
   .toggle {
     width: 50px;
@@ -278,29 +296,55 @@ const Wrap = styled.aside<{ $bg: string }>`
     background: rgba(255, 255, 255, 0.14);
     box-shadow: 0 0 0 2px rgba(206, 122, 88, 0.35) inset;
   }
-  .toggle-ic { width: 25px; height: 25px; transition: transform 0.2s; }
-  .toggle-ic[data-rot="1"] { transform: rotate(180deg); }
+  .toggle-ic {
+    width: 25px;
+    height: 25px;
+    transition: transform 0.2s;
+  }
+  .toggle-ic[data-rot="1"] {
+    transform: rotate(180deg);
+  }
 
   &[data-collapsed="true"] {
-    .toggle { opacity: 0; pointer-events: none; position: absolute; right: 10px; }
-    .logo { opacity: 1; }
-    .head:hover .toggle { opacity: 1; pointer-events: auto; }
-    .head:hover .logo { opacity: 0; }
+    .toggle {
+      opacity: 0;
+      pointer-events: none;
+      position: absolute;
+      right: 10px;
+    }
+    .logo {
+      opacity: 1;
+    }
+    .head:hover .toggle {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .head:hover .logo {
+      opacity: 0;
+    }
 
-    .sessionsWrap { display: none; }
-    .label { display: none; }
+    .sessionsWrap {
+      display: none;
+    }
+    .label {
+      display: none;
+    }
   }
 
   .body {
     z-index: 1;
-    min-height: 0; /* quan trọng để vùng giữa co được trong grid */
+    min-height: 0; /* để vùng giữa co được trong grid */
     display: grid;
     grid-template-rows: auto 1fr;
     gap: 10px;
     padding: 6px 10px;
   }
 
-  .quick { display: grid; grid-template-columns: 1fr; gap: 8px; }
+  .quick {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
 
   .sessionsWrap {
     display: grid;
@@ -311,10 +355,10 @@ const Wrap = styled.aside<{ $bg: string }>`
     min-height: 0; /* cho phép co trong grid */
   }
 
-  /* VÙNG CUỘN CHÍNH CỦA DANH SÁCH */
+  /* VÙNG CUỘN CỦA DANH SÁCH */
   .sessionsArea {
     min-height: 0;
-    overflow: auto;              /* <-- chỉ nơi này cuộn */
+    overflow: auto; /* <-- chỉ nơi này cuộn */
     padding-right: 4px;
   }
 
@@ -322,9 +366,13 @@ const Wrap = styled.aside<{ $bg: string }>`
     font-size: 0.99rem;
     font-weight: 1000;
     letter-spacing: 0.02em;
-    color: color-mix(in srgb, ${({ theme }) => theme.colors.accent2} 75%, black);
+    color: color-mix(
+      in srgb,
+      ${({ theme }) => theme.colors.accent2} 75%,
+      black
+    );
     margin: 6px 4px 8px;
-    text-shadow: 0 1px 2px rgba(255,255,255,0.6);
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.6);
   }
 
   .footer {
@@ -338,16 +386,23 @@ const Wrap = styled.aside<{ $bg: string }>`
   }
 
   /* Scrollbar gọn cho vùng sessionsArea */
-  .sessionsArea::-webkit-scrollbar { width: 10px; }
+  .sessionsArea::-webkit-scrollbar {
+    width: 10px;
+  }
   .sessionsArea::-webkit-scrollbar-thumb {
     background: #d6d6d6;
     border-radius: 10px;
     border: 3px solid transparent;
     background-clip: content-box;
   }
-  .sessionsArea { scrollbar-width: thin; scrollbar-color: #d6d6d6 transparent; }
+  .sessionsArea {
+    scrollbar-width: thin;
+    scrollbar-color: #d6d6d6 transparent;
+  }
 
-  @media (max-width: 920px) { background-position: center; }
+  @media (max-width: 920px) {
+    background-position: center;
+  }
 `;
 
 const QuickBtn = styled.button`
@@ -364,10 +419,22 @@ const QuickBtn = styled.button`
   cursor: pointer;
   transition: background 0.18s, border-color 0.18s, transform 0.18s;
 
-  .qicon { width: 20px; height: 20px; color: ${({ theme }) => theme.colors.accent}; }
-  &:hover { background: rgba(255, 255, 255, 0.96); border-color: #f0d2c5; transform: translateY(-1px); }
-  [data-collapsed="true"] & { justify-content: center; }
-  [data-collapsed="true"] & .qlabel { display: none; }
+  .qicon {
+    width: 20px;
+    height: 20px;
+    color: ${({ theme }) => theme.colors.accent};
+  }
+  &:hover {
+    background: rgba(255, 255, 255, 0.96);
+    border-color: #f0d2c5;
+    transform: translateY(-1px);
+  }
+  [data-collapsed="true"] & {
+    justify-content: center;
+  }
+  [data-collapsed="true"] & .qlabel {
+    display: none;
+  }
 `;
 
 const NavBtn = styled.button`
@@ -385,35 +452,78 @@ const NavBtn = styled.button`
   cursor: pointer;
   transition: background 0.2s, box-shadow 0.2s, color 0.2s, border-color 0.2s;
 
-  .icon { width: 22px; height: 22px; color: ${({ theme }) => theme.colors.accent2}; transition: color 0.2s; }
-  &:hover { background: rgba(255, 255, 255, 0.98); box-shadow: inset 0 1px 0 rgba(0, 0, 0, 0.03); border-color: #f0d2c5; }
+  .icon {
+    width: 22px;
+    height: 22px;
+    color: ${({ theme }) => theme.colors.accent2};
+    transition: color 0.2s;
+  }
+  &:hover {
+    background: rgba(255, 255, 255, 0.98);
+    box-shadow: inset 0 1px 0 rgba(0, 0, 0, 0.03);
+    border-color: #f0d2c5;
+  }
   &:focus-visible,
   &[data-active="true"] {
     outline: none;
     border: 1px solid transparent;
-    background:
-      linear-gradient(90deg, ${({ theme }) => theme.colors.accent}, ${({ theme }) => theme.colors.accent2}) padding-box,
-      linear-gradient(90deg, ${({ theme }) => theme.colors.accent}, ${({ theme }) => theme.colors.accent2}) border-box;
+    background: linear-gradient(
+          90deg,
+          ${({ theme }) => theme.colors.accent},
+          ${({ theme }) => theme.colors.accent2}
+        )
+        padding-box,
+      linear-gradient(
+          90deg,
+          ${({ theme }) => theme.colors.accent},
+          ${({ theme }) => theme.colors.accent2}
+        )
+        border-box;
     background-clip: padding-box, border-box;
     color: #fff;
     box-shadow: 0 4px 18px rgba(206, 122, 88, 0.35);
   }
   &:focus-visible .icon,
-  &[data-active="true"] .icon { color: #fff; }
-  [data-collapsed="true"] & { justify-content: center; padding: 10px 0; border-radius: 12px; }
+  &[data-active="true"] .icon {
+    color: #fff;
+  }
+  [data-collapsed="true"] & {
+    justify-content: center;
+    padding: 10px 0;
+    border-radius: 12px;
+  }
 `;
 
 /* SVGs */
 const SvgTwoPanes = (p: React.SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" {...p}>
-    <rect x="3" y="5" width="8" height="14" rx="2" stroke="currentColor" strokeWidth="2" />
-    <rect x="13" y="5" width="8" height="14" rx="2" stroke="currentColor" strokeWidth="2" />
+    <rect
+      x="3"
+      y="5"
+      width="8"
+      height="14"
+      rx="2"
+      stroke="currentColor"
+      strokeWidth="2"
+    />
+    <rect
+      x="13"
+      y="5"
+      width="8"
+      height="14"
+      rx="2"
+      stroke="currentColor"
+      strokeWidth="2"
+    />
   </svg>
 );
 const SvgPen = (p: React.SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" {...p}>
     <path d="M12 20h9" strokeWidth="2" />
-    <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" strokeWidth="2" />
+    <path
+      d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"
+      strokeWidth="2"
+    />
   </svg>
 );
 const SvgSearch = (p: React.SVGProps<SVGSVGElement>) => (
@@ -428,9 +538,28 @@ const SvgUser = (p: React.SVGProps<SVGSVGElement>) => (
     <path d="M3 20a9 6 0 0 1 18 0v1H3z" strokeWidth="2" />
   </svg>
 );
+// const SvgSetting = (p: React.SVGProps<SVGSVGElement>) => (
+//   <svg
+//     viewBox="0 0 24 24"
+//     fill="none"
+//     stroke="currentColor"
+//     strokeWidth={2}
+//     strokeLinecap="round"
+//     strokeLinejoin="round"
+//     {...p}
+//   >
+//     <circle cx="12" cy="12" r="3" />
+//     <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09c.7 0 1.31-.4 1.51-1a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06c.51.51 1.23.66 1.82.33.46-.26 1-.81 1-1.51V3a2 2 0 0 1 4 0v.09c0 .7.4 1.31 1 1.51.59.33 1.31.18 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06c-.36.36-.48.9-.33 1.82.2.59.81 1 1.51 1H21a2 2 0 0 1 0 4h-.09c-.7 0-1.31.4-1.51 1Z" />
+//   </svg>
+// );
+
 const SvgLogout = (p: React.SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" {...p}>
-    <path d="M10 7V4a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2h-6a2 2 0 0 1-2-2v-3" stroke="currentColor" strokeWidth="2" />
+    <path
+      d="M10 7V4a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2h-6a2 2 0 0 1-2-2v-3"
+      stroke="currentColor"
+      strokeWidth="2"
+    />
     <path d="M15 12H3m4-4-4 4 4 4" stroke="currentColor" strokeWidth="2" />
   </svg>
 );

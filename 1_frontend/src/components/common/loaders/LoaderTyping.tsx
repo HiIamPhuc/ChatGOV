@@ -21,16 +21,32 @@ const Wrap = styled.div`
   box-shadow: ${({ theme }) => theme.shadow};
 
   .dot {
-    width: 8px; height: 8px; border-radius: 999px;
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
     background: ${({ theme }) => theme.colors.accent2};
-    opacity: .6; transform: translateY(0);
+    opacity: 0.6;
+    transform: translateY(0);
     animation: bounce 1.2s infinite ease-in-out;
   }
-  .dot:nth-child(2) { animation-delay: .15s; background: ${({ theme }) => theme.colors.accent}; }
-  .dot:nth-child(3) { animation-delay: .30s; }
+  .dot:nth-child(2) {
+    animation-delay: 0.15s;
+    background: ${({ theme }) => theme.colors.accent};
+  }
+  .dot:nth-child(3) {
+    animation-delay: 0.3s;
+  }
 
   @keyframes bounce {
-    0%, 80%, 100% { transform: translateY(0); opacity: .35; }
-    40% { transform: translateY(-6px); opacity: 1; }
+    0%,
+    80%,
+    100% {
+      transform: translateY(0);
+      opacity: 0.35;
+    }
+    40% {
+      transform: translateY(-6px);
+      opacity: 1;
+    }
   }
 `;
