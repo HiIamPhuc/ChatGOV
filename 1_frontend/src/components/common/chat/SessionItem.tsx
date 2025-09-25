@@ -25,7 +25,7 @@ export default function SessionItem({
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<Pos | null>(null);
 
-  const rowBtnRef = useRef<HTMLButtonElement | null>(null);
+  const rowBtnRef = useRef<HTMLDivElement | null>(null);    // ← div thay vì button
   const dotsRef = useRef<HTMLButtonElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
@@ -109,7 +109,7 @@ export default function SessionItem({
       style={
         pos
           ? { top: pos.top, left: pos.left, visibility: "visible", ["--arrow-top" as any]: `${pos.arrowTop}px` }
-          : { visibility: "hidden", top: 0, left: 0 } // render để đo, nhưng ẩn
+          : { visibility: "hidden", top: 0, left: 0 }
       }
       onClick={(e) => e.stopPropagation()}
       role="menu"
@@ -134,16 +134,30 @@ export default function SessionItem({
     </MenuWrap>
   );
 
+  // keyboard active cho row “pseudo-button”
+  const onRowKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onClick?.();
+    }
+  };
+
   return (
     <Row $active={!!active}>
-      <button
+      <div
         ref={rowBtnRef}
         className="rowBtn"
+        role="button"
+        tabIndex={0}
+        aria-pressed={active}
         title={title}
         onClick={onClick}
+        onKeyDown={onRowKeyDown}
       >
         <span className="accent" aria-hidden />
         <span className="tx">{title}</span>
+
+        {/* nút 3 chấm tách riêng → KHÔNG lồng button trong button */}
         <button
           ref={dotsRef}
           className="dots"
@@ -155,7 +169,7 @@ export default function SessionItem({
         >
           <MoreVertical size={16} strokeWidth={2} />
         </button>
-      </button>
+      </div>
 
       {open && createPortal(Menu, document.body)}
     </Row>
@@ -247,7 +261,7 @@ const MenuWrap = styled.div`
   z-index: 1000;
   min-width: 180px;
   padding: 8px;
-  visibility: hidden; /* sẽ bật lên = visible khi đã có pos */
+  visibility: hidden;
 
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(10px) saturate(1.05);
@@ -280,7 +294,6 @@ const MenuWrap = styled.div`
 
   .danger, .item.danger .ic { color: ${({ theme }) => theme.colors.danger}; }
 
-  /* mũi tên: dùng data-side để đặt trái/phải */
   .arrow {
     position: absolute;
     top: var(--arrow-top, 10px);
