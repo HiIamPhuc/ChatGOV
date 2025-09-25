@@ -124,7 +124,6 @@ The backend API will be available at `http://localhost:8000`
 - **React Router** - Client-side routing
 - **Axios** - HTTP client for API communication
 - **React Markdown** - Markdown rendering with syntax highlighting
-- **Supabase Client** - Authentication and database integration
 
 ### Backend
 
@@ -174,6 +173,7 @@ The system uses a sophisticated AI pipeline:
 - `POST /api/auth/register` - User registration
 - `POST /api/auth/logout` - User logout
 - `POST /api/auth/forgot-password` - Password reset
+
 
 ### Chat & Sessions
 
