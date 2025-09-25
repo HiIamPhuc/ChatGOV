@@ -1,5 +1,5 @@
 // frontend/src/services/profile.ts
-import { api } from "@/lib/http";
+import { api } from "@/utils/http";
 
 export type Profile = {
   id: string;

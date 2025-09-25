@@ -7,6 +7,7 @@ import LoaderPage from "@/components/common/loaders/LoaderPage";
 import { useNavigate } from "react-router-dom";
 import Button from "@/components/common/buttons/Button";
 import PwField from "@/components/common/inputs/PwField";
+import { formatError } from "@/utils/formatError";
 
 // ảnh trong /public
 const bg = "/forgot-reset-bg.jpg";
@@ -66,11 +67,7 @@ export default function ResetPassword() {
       notify({ title: t("passwordUpdated"), tone: "success" });
       nav("/signin");
     } catch (err: any) {
-      notify({
-        title: t("error"),
-        content: err?.response?.data?.detail || err?.message || "Update password failed",
-        tone: "error",
-      });
+      notify({ title: t("error"), content: formatError(e), tone: "error" });
     } finally {
       setLoading(false);
     }

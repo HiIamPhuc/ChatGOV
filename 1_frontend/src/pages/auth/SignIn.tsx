@@ -6,6 +6,7 @@ import { Link, useNavigate } from "react-router-dom";
 import LoaderPage from "@/components/common/loaders/LoaderPage";
 import { useToast } from "@/app/toast";
 import { useI18n } from "@/app/i18n";
+import { formatError } from "@/utils/formatError";
 
 // ảnh /public
 const bg = "/login-bg.jpg";
@@ -23,7 +24,7 @@ export default function SignIn() {
       notify({ title: t("signinSuccess"), tone: "success" });
       nav("/app");
     } catch (e: any) {
-      notify({ title: t("error"), content: e?.response?.data?.detail || e?.message, tone: "error" });
+      notify({ title: t("error"), content: formatError(e), tone: "error" });
     } finally {
       setLoading(false);
     }

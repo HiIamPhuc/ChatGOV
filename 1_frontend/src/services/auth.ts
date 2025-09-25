@@ -1,5 +1,5 @@
 // frontend/src/services/auth.ts
-import { api } from "@/lib/http";
+import { api } from "@/utils/http";
 
 export type Me = { id: string; email: string; user_metadata?: Record<string, any> };
 

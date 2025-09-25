@@ -5,6 +5,7 @@ import { forgotPassword } from "@/services/auth";
 import { useToast } from "@/app/toast";
 import { useI18n } from "@/app/i18n";
 import ForgotForm from "@/components/forms/ForgotPasswordForm";
+import { formatError } from "@/utils/formatError";
 
 // ảnh trong /public
 const bg = "/forgot-reset-bg.jpg";
@@ -20,7 +21,7 @@ export default function ForgotPage() {
       await forgotPassword(email); // backend gọi Supabase resetPasswordEmail
       notify({ title: t("resetSent"), tone: "success" });
     } catch (e: any) {
-      notify({ title: t("error"), content: e?.response?.data?.detail || e?.message, tone: "error" });
+      notify({ title: t("error"), content: formatError(e), tone: "error" });
     } finally {
       setLoading(false);
     }
