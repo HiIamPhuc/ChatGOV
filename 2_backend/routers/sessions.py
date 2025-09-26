@@ -2,8 +2,12 @@ import datetime
 from typing import List, Optional
 from fastapi import APIRouter, HTTPException, Query, Path, Body
 from pydantic import BaseModel, Field
+from langchain_core.messages import HumanMessage
 from ..database import client, get_user, save_user, get_session, save_session, deserialize_chat_history
 from ..models import Session
+from ..graph import llm
+from ..prompts import TITLE_GENERATION_PROMPT
+
 
 router = APIRouter()
 
@@ -105,6 +109,47 @@ def rename_session(session_id: str = Path(...), payload: RenameRequest = Body(..
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)
                             or "Failed to rename session")
+
+
+@router.post("/api/chat/sessions/{session_id}/autoname", response_model=dict)
+def autoname_session(session_id: str = Path(...)):
+    """
+    Automatically generate and set a title for the session based on the first message.
+    """
+    session = get_session(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    if type(session.title) != None and session.title != None:
+        # Session already has a title, no need to generate a new one.
+        return {"ok": True, "session_id": session_id, "title": session.title, "message": "Session already named."}
+
+    try:
+        messages = deserialize_chat_history(session.chat_history or [])
+        user_messages = []
+        for msg in messages:
+            if isinstance(msg, HumanMessage):
+                user_messages.append(msg.content)
+
+        if not user_messages:
+            raise HTTPException(
+                status_code=400, detail="No user messages found to generate a title from.")
+
+        # Generate title
+        prompt = TITLE_GENERATION_PROMPT.invoke({"user_messages": user_messages})
+        response = llm.invoke(prompt)
+        new_title = response.content.strip().strip('"')
+
+        # Update session title
+        client.table("sessions").update({"title": new_title}).eq(
+            "session_id", session_id).execute()
+
+        return {"ok": True, "session_id": session_id, "title": new_title}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=str(e) or "Failed to auto-name session")
 
 
 @router.delete("/api/chat/sessions/{session_id}")

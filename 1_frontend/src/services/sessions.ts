@@ -55,6 +55,13 @@ export async function renameSession(
   });
 }
 
+export async function autoNameSession(
+  sessionId: string
+): Promise<{ ok: boolean; session_id: string; title: string }> {
+  const { data } = await api.post(`/api/chat/sessions/${encodeURIComponent(sessionId)}/autoname`);
+  return data;
+}
+
 export async function deleteSession(
   sessionId: string,
   userId: string

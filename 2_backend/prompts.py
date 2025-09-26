@@ -1,5 +1,5 @@
 from .config import WEBSITE_NAME, WEBSITE_URL
-from langchain_core.prompts import PromptTemplate
+from langchain_core.prompts import PromptTemplate, ChatPromptTemplate
 from datetime import datetime
 
 # Current date and time for dynamic context
@@ -36,5 +36,16 @@ SYSTEM_PROMPT = PromptTemplate(
 
         "# Thông tin người dùng:\n{user_profile}\n\n"
         "# Thông tin dịch vụ đã tìm được:\n{docs_content}"
+    )
+)
+
+TITLE_GENERATION_PROMPT = PromptTemplate(
+    input_variables=["user_messages"],
+    template=(
+        f"Bạn là trợ lý AI chuyên đặt tiêu đề cho các cuộc hội thoại về dịch vụ công trên nền tảng {WEBSITE_NAME} (đường link: {WEBSITE_URL})."
+        "Tiêu đề chỉ nên dài khoảng 5-10 từ."
+        "Nếu cuộc hội thoại không chứa thông tin cụ thể nào, hãy đặt một tiêu đề chung chung như: "
+        "Trợ lý ảo dịch vụ công.\n"
+        "Hãy tạo tiêu đề cho cuộc hội thoại sau đây:\n\n---\n\n{user_messages}"
     )
 )

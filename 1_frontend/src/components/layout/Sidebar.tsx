@@ -38,13 +38,25 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
     activeIdFromState || sessionStorage.getItem("activeSessionId")
   );
 
-  // Sync active id khi location.state thay đổi
+  // Sync active id và title khi location.state thay đổi
   useEffect(() => {
     if (activeIdFromState) {
       sessionStorage.setItem("activeSessionId", activeIdFromState);
       setActiveId(activeIdFromState);
+      
+      // Update title in local state immediately when it changes
+      const newTitle = location?.state?.title;
+      if (newTitle) {
+        setSessions(prev => 
+          prev.map(s => 
+            s.session_id === activeIdFromState 
+              ? { ...s, title: newTitle }
+              : s
+          )
+        );
+      }
     }
-  }, [activeIdFromState]);
+  }, [activeIdFromState, location?.state?.title]);
 
   useEffect(() => {
     me()
@@ -52,6 +64,9 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
       .catch(() => {});
   }, []);
 
+  // Refresh sessions when location state changes (for auto-naming)
+  const locationTitle = location?.state?.title;
+  
   useEffect(() => {
     if (!userId) return;
     listSessions(userId)
@@ -59,7 +74,7 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
       .catch((e) => {
         console.error(e);
       });
-  }, [userId, pathname, activeId]);
+  }, [userId, pathname, activeId, locationTitle]);
 
   const items: Session[] = useMemo(() => {
     return sessions.map((s) => ({

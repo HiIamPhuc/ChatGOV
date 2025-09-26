@@ -5,7 +5,7 @@ import ChatMessage from "@/components/common/chat/ChatMessage";
 import LoaderTyping from "@/components/common/loaders/LoaderTyping";
 import { useI18n } from "@/app/i18n";
 import { me } from "@/services/auth";
-import { startSession, streamChat, getHistory } from "@/services/sessions";
+import { startSession, streamChat, getHistory, autoNameSession } from "@/services/sessions";
 import { useLocation, useNavigate } from "react-router-dom";
 
 type Msg = { id: string; role: "user" | "assistant"; content: string };
@@ -233,6 +233,24 @@ export default function ChatPage() {
           prev.map((m) => (m.id === aid ? { ...m, content: acc } : m))
         );
       });
+
+      // 4) Auto-name the session if this is the first message
+      if (messages.length === 0) {
+        try {
+          const { title } = await autoNameSession(sid!);
+          // Update the session title in location state to trigger sidebar update
+          nav(location.pathname, {
+            state: { 
+              ...location.state, 
+              sessionId: sid,
+              title: title
+            },
+            replace: true,
+          });
+        } catch (e) {
+          console.error("Failed to auto-name session:", e);
+        }
+      }
     } finally {
       setTyping(false);
     }
