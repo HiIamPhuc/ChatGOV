@@ -93,8 +93,14 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
   const handleLogout = async () => {
     try {
       await apiLogout();
+      // dọn state client để không “hồi sinh” khi Back
+      try {
+        sessionStorage.clear();
+        localStorage.removeItem("me");
+      } catch {}
+
       notify({ title: t("signin"), content: t("signedOut"), tone: "info" });
-      nav("/signin");
+      nav("/signin", { replace: true });
     } catch (e: any) {
       notify({
         title: t("error"),

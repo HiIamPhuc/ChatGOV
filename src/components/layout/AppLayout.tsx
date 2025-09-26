@@ -420,7 +420,7 @@ const Banner = styled.div`
     font-weight: 600;
     white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis.
+    text-overflow: ellipsis;
   }
 
   .go {
