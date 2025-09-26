@@ -4,6 +4,7 @@ import Sidebar from "@/components/layout/Sidebar";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useI18n } from "@/app/i18n";
 import { getProfile } from "@/services/profile";
+import { me } from "@/services/auth";
 
 type ProfileLite = {
   name?: string | null;
@@ -18,6 +19,24 @@ export default function AppLayout() {
 
   const [collapsed, setCollapsed] = useState(false);
   const [needProfile, setNeedProfile] = useState(false);
+
+  /* ====== Guard đăng nhập ở Layout ====== */
+  useEffect(() => {
+    let alive = true;
+    me()
+      .then(() => {
+        /* ok */
+      })
+      .catch(() => {
+        try {
+          sessionStorage.removeItem("activeSessionId");
+        } catch {}
+        if (alive) navigate("/signin", { replace: true });
+      });
+    return () => {
+      alive = false;
+    };
+  }, [navigate]);
 
   /* ====== Sidebar state ====== */
   useEffect(() => {

@@ -33,6 +33,11 @@ export async function me(): Promise<Me> {
 
 export async function logout() {
   await api.post("/api/auth/logout");
+  // dọn state client để tránh UI cũ hiện lại khi back
+  try {
+    sessionStorage.clear();
+    localStorage.removeItem("me");
+  } catch {}
 }
 
 export async function forgotPassword(email: string) {

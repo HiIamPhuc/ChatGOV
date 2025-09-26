@@ -39,12 +39,18 @@ export default function ChatPage() {
   const location = useLocation() as any;
   const nav = useNavigate();
 
-  // --- Lấy user id
+  // --- Lấy user id + guard auth: nếu 401 thì về signin (replace:true để tránh quay lại bằng Back)
   useEffect(() => {
+    let alive = true;
     me()
-      .then((u) => setUserId(u.id))
-      .catch(() => {});
+      .then((u) => { if (alive) setUserId(u.id); })
+      .catch(() => {
+        try { sessionStorage.removeItem("activeSessionId"); } catch {}
+        nav("/signin", { replace: true });
+      });
+    return () => { alive = false; };
   }, []);
+
 
   // --- Detect "new chat" bằng ?new=1 -> reset
   useEffect(() => {
