@@ -28,14 +28,24 @@ export default function AppLayout() {
         /* ok */
       })
       .catch(() => {
-        try {
-          sessionStorage.removeItem("activeSessionId");
-        } catch {}
+        try { sessionStorage.removeItem("activeSessionId"); } catch {}
         if (alive) navigate("/signin", { replace: true });
       });
-    return () => {
-      alive = false;
+    return () => { alive = false; };
+  }, [navigate]);
+
+  /* ====== FIX bfcache: re-validate khi quay lại bằng Back/Forward ====== */
+  useEffect(() => {
+    const onPageShow = (e: PageTransitionEvent) => {
+      if ((e as any).persisted) {
+        me().catch(() => {
+          try { sessionStorage.removeItem("activeSessionId"); } catch {}
+          navigate("/signin", { replace: true });
+        });
+      }
     };
+    window.addEventListener("pageshow", onPageShow as any);
+    return () => window.removeEventListener("pageshow", onPageShow as any);
   }, [navigate]);
 
   /* ====== Sidebar state ====== */
@@ -410,7 +420,7 @@ const Banner = styled.div`
     font-weight: 600;
     white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis;
+    text-overflow: ellipsis.
   }
 
   .go {
