@@ -59,6 +59,17 @@ def deserialize_chat_history(serialized: List[dict]) -> List[BaseMessage]:
     return messages_from_dict(serialized)
 
 
+def get_all_service_titles() -> List[str]:
+    response = (
+        client.table("services").select(
+            "ten_thu_tuc").execute()
+    )
+
+    titles = [service['ten_thu_tuc'] for service in response.data]
+
+    return titles
+
+
 def search_services_by_name(
     query: str, threshold: float = 0.3, limit: int = 5
 ) -> List[Dict]:

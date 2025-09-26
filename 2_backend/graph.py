@@ -6,6 +6,7 @@ from langchain.chat_models import init_chat_model
 from .config import GEMINI_MODEL
 from .tools import find_available_services, get_procedure_information
 from .prompts import SYSTEM_PROMPT
+from .database import get_all_service_titles
 
 
 class ChatState(MessagesState):
@@ -17,8 +18,10 @@ llm = init_chat_model(GEMINI_MODEL, model_provider="google_genai")
 
 def query_or_respond(state: ChatState):
     # Add system message at the start of conversation
-    messages = [SystemMessage(content=SYSTEM_PROMPT.invoke(
-        {"docs_content": "", "user_profile": state.get("user_profile", {})}
+    messages = [SystemMessage(content=SYSTEM_PROMPT.invoke({
+        "docs_content": "",
+        "user_profile": state.get("user_profile", {}),
+        "supported_services": '\n'.join('\t\t-' + service for service in get_all_service_titles())}
     ).to_string())] + state["messages"]
 
     # Bind both tools for service search and information retrieval
@@ -47,7 +50,8 @@ def generate(state: ChatState):
     system_message_content = (
         SYSTEM_PROMPT.invoke({
             "docs_content": docs_content if docs_content.strip() else "",
-            "user_profile": state.get("user_profile", {})
+            "user_profile": state.get("user_profile", {}),
+            "supported_services": ''
         }).to_string()
     )
 
