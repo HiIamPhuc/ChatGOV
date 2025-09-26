@@ -38,20 +38,26 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
     activeIdFromState || sessionStorage.getItem("activeSessionId")
   );
 
+  // --- MODAL STATES: rename / delete
+  const [renameTarget, setRenameTarget] = useState<{
+    id: string;
+    value: string;
+  } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
   // Sync active id và title khi location.state thay đổi
   useEffect(() => {
     if (activeIdFromState) {
       sessionStorage.setItem("activeSessionId", activeIdFromState);
       setActiveId(activeIdFromState);
-      
+
       // Update title in local state immediately when it changes
       const newTitle = location?.state?.title;
       if (newTitle) {
-        setSessions(prev => 
-          prev.map(s => 
-            s.session_id === activeIdFromState 
-              ? { ...s, title: newTitle }
-              : s
+        setSessions((prev) =>
+          prev.map((s) =>
+            s.session_id === activeIdFromState ? { ...s, title: newTitle } : s
           )
         );
       }
@@ -66,7 +72,7 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
 
   // Refresh sessions when location state changes (for auto-naming)
   const locationTitle = location?.state?.title;
-  
+
   useEffect(() => {
     if (!userId) return;
     listSessions(userId)
@@ -113,40 +119,64 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
     nav("/app", { state: { sessionId: id } });
   };
 
+  // --- mở modal rename
   const onRename = async (id: string) => {
-    const next = prompt(t("rename") || "Rename");
+    const current = sessions.find((s) => s.session_id === id)?.title || "";
+    setRenameTarget({ id, value: current });
+  };
+
+  // --- mở modal xác nhận xoá
+  const onDelete = async (id: string) => {
+    if (!userId) return;
+    setDeleteTarget(id);
+  };
+
+  // --- SUBMIT RENAME
+  const submitRename = async () => {
+    if (!renameTarget) return;
+    const next = renameTarget.value.trim();
     if (!next) return;
     try {
-      await apiRename(id, next);
+      setBusy(true);
+      await apiRename(renameTarget.id, next);
       setSessions((prev) =>
-        prev.map((s) => (s.session_id === id ? { ...s, title: next } : s))
+        prev.map((s) =>
+          s.session_id === renameTarget.id ? { ...s, title: next } : s
+        )
       );
+      setRenameTarget(null);
     } catch (e: any) {
       notify({
         title: t("error"),
         content: e?.response?.data?.detail || e?.message,
         tone: "error",
       });
+    } finally {
+      setBusy(false);
     }
   };
 
-  const onDelete = async (id: string) => {
-    if (!userId) return;
-    if (!confirm(t("confirmDelete") || "Delete this session?")) return;
+  // --- CONFIRM DELETE
+  const confirmDelete = async () => {
+    if (!deleteTarget || !userId) return;
     try {
-      await apiDelete(id, userId);
-      setSessions((prev) => prev.filter((s) => s.session_id !== id));
-      if (activeId === id) {
+      setBusy(true);
+      await apiDelete(deleteTarget, userId);
+      setSessions((prev) => prev.filter((s) => s.session_id !== deleteTarget));
+      if (activeId === deleteTarget) {
         sessionStorage.removeItem("activeSessionId");
         setActiveId(null);
         nav({ pathname: "/app", search: "?new=1" });
       }
+      setDeleteTarget(null);
     } catch (e: any) {
       notify({
         title: t("error"),
         content: e?.response?.data?.detail || e?.message,
         tone: "error",
       });
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -163,7 +193,10 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
           title={collapsed ? t("expand") : t("collapse")}
           aria-label="Toggle sidebar"
         >
-          <SvgTwoPanes className="toggle-ic" data-rot={collapsed ? "1" : "0"} />
+          <SvgTwoPanes
+            className="toggle-ic"
+            data-rot={!collapsed ? "1" : "0"}
+          />
         </button>
       </div>
 
@@ -231,6 +264,96 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
           nav("/app", { state: { sessionId: sid } });
         }}
       />
+
+      {/* --- MODAL RENAME --- */}
+      {renameTarget && (
+        <ModalOverlay onClick={() => !busy && setRenameTarget(null)}>
+          <ModalCard onClick={(e) => e.stopPropagation()}>
+            <ModalHeader>
+              <h4>{t("rename") || "Đổi tên"}</h4>
+              <button
+                onClick={() => !busy && setRenameTarget(null)}
+                aria-label="Đóng"
+              >
+                ✕
+              </button>
+            </ModalHeader>
+            <ModalBody>
+              <label className="label">{t("rename") || "Đổi tên"}</label>
+              <input
+                autoFocus
+                placeholder={t("rename") || "Đổi tên"}
+                value={renameTarget.value}
+                onChange={(e) =>
+                  setRenameTarget((p) =>
+                    p ? { ...p, value: e.target.value } : p
+                  )
+                }
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") submitRename();
+                  if (e.key === "Escape") setRenameTarget(null);
+                }}
+              />
+            </ModalBody>
+            <ModalActions>
+              <button
+                className="ghost"
+                onClick={() => setRenameTarget(null)}
+                disabled={busy}
+              >
+                {t("cancel") || "Cancel"}
+              </button>
+              <button
+                className="primary"
+                onClick={submitRename}
+                disabled={busy || !renameTarget.value.trim()}
+              >
+                {"Lưu"}
+              </button>
+            </ModalActions>
+          </ModalCard>
+        </ModalOverlay>
+      )}
+
+      {/* --- MODAL DELETE --- */}
+      {deleteTarget && (
+        <ModalOverlay onClick={() => !busy && setDeleteTarget(null)}>
+          <ModalCard onClick={(e) => e.stopPropagation()}>
+            <ModalHeader>
+              <h4>{t("confirmDelete") || "Xoá cuộc hội thoại?"}</h4>
+              <button
+                onClick={() => !busy && setDeleteTarget(null)}
+                aria-label="Đóng"
+              >
+                ✕
+              </button>
+            </ModalHeader>
+            <ModalBody>
+              <p style={{ margin: 0 }}>
+                {
+                  "Bạn xác nhận xóa, hành động này hiện tại không thể hoàn tác!!!"
+                }
+              </p>
+            </ModalBody>
+            <ModalActions>
+              <button
+                className="ghost"
+                onClick={() => setDeleteTarget(null)}
+                disabled={busy}
+              >
+                {t("cancel") || "Cancel"}
+              </button>
+              <button
+                className="danger"
+                onClick={confirmDelete}
+                disabled={busy}
+              >
+                {t("delete") || "Delete"}
+              </button>
+            </ModalActions>
+          </ModalCard>
+        </ModalOverlay>
+      )}
     </Wrap>
   );
 }
@@ -509,26 +632,167 @@ const NavBtn = styled.button`
   }
 `;
 
+/* --- MODAL styles --- */
+const ModalOverlay = styled.div`
+  position: fixed;
+  inset: 0;
+  background: rgba(144, 57, 56, 0.18); /* accent2 tint */
+  backdrop-filter: blur(2px);
+  display: grid;
+  place-items: center;
+  z-index: 70;
+`;
+
+const ModalCard = styled.div`
+  width: min(520px, 92vw);
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.primary};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.radii.lg};
+  box-shadow: ${({ theme }) => theme.shadow};
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+`;
+
+const ModalHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+
+  h4 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 800;
+    color: ${({ theme }) => theme.colors.accent2};
+  }
+  button {
+    min-width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 1px solid ${({ theme }) => theme.colors.border};
+    background: ${({ theme }) => theme.colors.surface2};
+    color: ${({ theme }) => theme.colors.secondary};
+  }
+  button:hover {
+    color: ${({ theme }) => theme.colors.accent2};
+    border-color: ${({ theme }) => theme.colors.accent};
+    background: rgba(206, 122, 88, 0.1);
+  }
+`;
+
+const ModalBody = styled.div`
+  padding: 14px;
+
+  .label {
+    display: block;
+    font-size: 12px;
+    color: ${({ theme }) => theme.colors.secondary};
+    margin-bottom: 6px;
+  }
+  input {
+    width: 100%;
+    background: ${({ theme }) => theme.colors.surface2};
+    border: 1px solid ${({ theme }) => theme.colors.border};
+    color: ${({ theme }) => theme.colors.primary};
+    border-radius: ${({ theme }) => theme.radii.md};
+    padding: 10px 12px;
+    outline: none;
+    transition: border-color 0.12s ease, box-shadow 0.12s ease;
+  }
+  input:focus {
+    border-color: ${({ theme }) => theme.colors.accent};
+    box-shadow: 0 0 0 3px rgba(206, 122, 88, 0.16);
+  }
+  p {
+    color: ${({ theme }) => theme.colors.primary};
+  }
+`;
+
+const ModalActions = styled.div`
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  padding: 12px 14px;
+  border-top: 1px solid ${({ theme }) => theme.colors.border};
+
+  button {
+    min-width: 84px;
+    height: 36px;
+    padding: 0 14px;
+    border-radius: 10px;
+    cursor: pointer;
+    border: 1px solid ${({ theme }) => theme.colors.border};
+    background: ${({ theme }) => theme.colors.surface2};
+    color: ${({ theme }) => theme.colors.secondary};
+    transition: all 0.12s ease;
+  }
+  button:hover:not(:disabled) {
+    color: ${({ theme }) => theme.colors.accent2};
+    border-color: ${({ theme }) => theme.colors.accent};
+    background: rgba(206, 122, 88, 0.1);
+  }
+  button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  .primary {
+    background: linear-gradient(
+      90deg,
+      ${({ theme }) => theme.colors.accent},
+      ${({ theme }) => theme.colors.accent2}
+    );
+    color: #fff;
+    border-color: transparent;
+  }
+  .primary:hover:not(:disabled) {
+    filter: brightness(0.97);
+  }
+  .danger {
+    background: #ffebe8;
+    color: #b42318;
+    border-color: #ffd0cb;
+  }
+  .danger:hover:not(:disabled) {
+    background: #ffe0db;
+    border-color: #ffb7af;
+  }
+  .ghost {
+  }
+`;
+
 /* SVGs */
 const SvgTwoPanes = (p: React.SVGProps<SVGSVGElement>) => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" {...p}>
+  <svg viewBox="0 0 24 24" fill="none" {...p}>
+    {/* khung bên ngoài */}
     <rect
       x="3"
-      y="5"
-      width="8"
-      height="14"
-      rx="2"
+      y="4"
+      width="18"
+      height="16"
+      rx="3"
       stroke="currentColor"
       strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
     />
-    <rect
-      x="13"
-      y="5"
-      width="8"
-      height="14"
-      rx="2"
+    {/* đường chia sidebar */}
+    <path
+      d="M9 4v16"
       stroke="currentColor"
       strokeWidth="2"
+      strokeLinecap="round"
+    />
+    {/* mũi tên điều hướng */}
+    <path
+      d="M14 9l3 3-3 3"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
     />
   </svg>
 );
@@ -553,6 +817,7 @@ const SvgUser = (p: React.SVGProps<SVGSVGElement>) => (
     <path d="M3 20a9 6 0 0 1 18 0v1H3z" strokeWidth="2" />
   </svg>
 );
+
 // const SvgSetting = (p: React.SVGProps<SVGSVGElement>) => (
 //   <svg
 //     viewBox="0 0 24 24"

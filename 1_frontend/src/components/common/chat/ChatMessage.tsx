@@ -1,15 +1,26 @@
 import styled from "styled-components";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 
+/* ===================== types ===================== */
 export type Msg = {
   id: string;
   role: "user" | "assistant" | "ai";
   content: string;
 };
 
+type PreviewData = {
+  url: string;
+  hostname: string;
+  title?: string;
+  description?: string;
+  icon?: string; // favicon
+  image?: string; // screenshot
+};
+
+/* ===================== component ===================== */
 export default function ChatMessage({
   msg,
   done = true,
@@ -20,35 +31,29 @@ export default function ChatMessage({
   const isAssistant = /^(assistant|ai)$/i.test(String(msg.role || ""));
   const raw = String(msg.content ?? "");
 
-  // ---- Hooks: luôn gọi theo cùng thứ tự ----
+  // ---- Hooks theo đúng thứ tự ----
   const steps = useMemo(() => extractSteps(raw), [raw]);
   const contentNoSteps = useMemo(
     () => raw.replace(/<!--\s*steps\s*:\s*\[[\s\S]*?\]\s*-->/i, ""),
     [raw]
   );
-
-  // Chỉ normalize \r\n -> \n, không “vá” markdown
   const normalized = useMemo(
     () => contentNoSteps.replace(/\r\n/g, "\n"),
     [contentNoSteps]
   );
-
-  // Ẩn assistant rỗng (sau khi đã gọi đủ hooks)
   const hiddenAssistant = useMemo(
     () => isAssistant && normalized.trim().length === 0 && !steps,
     [isAssistant, normalized, steps]
   );
 
-  // Link card chỉ hiện khi xong
+  // Link card
   const firstUrl = useMemo(() => findFirstUrl(normalized), [normalized]);
   const showCard = useMemo(
     () => done && !!firstUrl && shouldShowLinkCard(normalized, firstUrl!),
     [done, normalized, firstUrl]
   );
 
-  // Key để buộc ReactMarkdown re-parse khi stream
   const mdKey = `md-${msg.id}-${normalized.length}`;
-
   const [copied, setCopied] = useState(false);
   const copyMarkdown = async () => {
     try {
@@ -58,6 +63,138 @@ export default function ChatMessage({
     } catch {}
   };
 
+  // ===== Link Preview hover =====
+  const mdRef = useRef<HTMLDivElement | null>(null);
+  const [preview, setPreview] = useState<{
+    show: boolean;
+    x: number;
+    y: number;
+    loading: boolean;
+    data: PreviewData | null;
+  }>({ show: false, x: 0, y: 0, loading: false, data: null });
+
+  useEffect(() => {
+    const root = mdRef.current;
+    if (!root) return;
+
+    const anchors = Array.from(
+      root.querySelectorAll<HTMLAnchorElement>("a[href^='http']")
+    );
+    if (!anchors.length) return;
+
+    let fetchTimer: number | null = null;
+
+    const showFor = (a: HTMLAnchorElement) => {
+      const rect = a.getBoundingClientRect();
+      const pad = 8,
+        vw = window.innerWidth,
+        vh = window.innerHeight;
+      const estW = 360,
+        estH = 210;
+      let x = rect.left,
+        y = rect.bottom + 8;
+      if (x + estW + pad > vw) x = Math.max(pad, vw - estW - pad);
+      if (y + estH + pad > vh) y = rect.top - estH - 8;
+      if (y < pad) y = Math.min(vh - estH - pad, rect.bottom + 8);
+
+      const u = safeURL(a.href);
+      const hostname = u ? u.hostname : a.href;
+      const icon = u
+        ? `https://www.google.com/s2/favicons?domain=${u.hostname}`
+        : undefined;
+
+      setPreview({
+        show: true,
+        x,
+        y,
+        loading: true,
+        data: { url: a.href, hostname, icon },
+      });
+
+      if (fetchTimer) window.clearTimeout(fetchTimer);
+      fetchTimer = window.setTimeout(async () => {
+        const og = await fetchOG(a.href).catch(() => null);
+        setPreview((p) => {
+          if (!p.show || !p.data) return { ...p, loading: false };
+          return {
+            ...p,
+            loading: false,
+            data: {
+              url: p.data.url,
+              hostname: p.data.hostname,
+              title: og?.title ?? p.data.title,
+              description: og?.description ?? p.data.description,
+              icon: og?.icon ?? p.data.icon,
+              image: og?.image ?? p.data.image,
+            },
+          };
+        });
+      }, 120);
+    };
+
+    const hide = () => {
+      if (fetchTimer) window.clearTimeout(fetchTimer);
+      setPreview((p) => (p.show ? { ...p, show: false } : p));
+    };
+
+    // Gắn trực tiếp vào từng <a>: hover vào hiện, rời là ẩn
+    const enterHandlers: Array<
+      [
+        (e: Event) => void,
+        (e: Event) => void,
+        (e: Event) => void,
+        (e: Event) => void
+      ]
+    > = [];
+    anchors.forEach((a) => {
+      const hEnter = () => showFor(a);
+      const hLeave = () => hide();
+      const hFocus = () => showFor(a);
+      const hBlur = () => hide();
+      a.addEventListener("mouseenter", hEnter);
+      a.addEventListener("mouseleave", hLeave);
+      a.addEventListener("focus", hFocus);
+      a.addEventListener("blur", hBlur);
+      enterHandlers.push([hEnter, hLeave, hFocus, hBlur]);
+    });
+
+    // Ẩn khi cuộn / bấm ra ngoài / nhấn Esc / tab mất focus
+    const onScroll = hide;
+    const onWheel = hide;
+    const onPointerDown = (e: PointerEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (!el?.closest?.(".md a")) hide();
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") hide();
+    };
+    const onBlur = hide;
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("wheel", onWheel, { passive: true });
+    window.addEventListener("pointerdown", onPointerDown, { passive: true });
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("blur", onBlur);
+
+    return () => {
+      anchors.forEach((a, i) => {
+        const [hEnter, hLeave, hFocus, hBlur] = enterHandlers[i]!;
+        a.removeEventListener("mouseenter", hEnter);
+        a.removeEventListener("mouseleave", hLeave);
+        a.removeEventListener("focus", hFocus);
+        a.removeEventListener("blur", hBlur);
+      });
+      window.removeEventListener("scroll", onScroll as any);
+      window.removeEventListener("wheel", onWheel as any);
+      window.removeEventListener("pointerdown", onPointerDown as any);
+      window.removeEventListener("keydown", onKeyDown as any);
+      window.removeEventListener("blur", onBlur as any);
+      if (fetchTimer) window.clearTimeout(fetchTimer);
+      setPreview({ show: false, x: 0, y: 0, loading: false, data: null });
+    };
+  }, [mdKey]);
+
+  // Không override <a> → để toàn bộ hành vi click trái/phải/middle là NATIVE
   if (hiddenAssistant) return null;
 
   return (
@@ -79,11 +216,10 @@ export default function ChatMessage({
               </>
             )}
 
-            {/* Nội dung: stream = pre-wrap; done = Markdown */}
             {!done ? (
               <pre className="streaming">{normalized}</pre>
             ) : (
-              <div className="md">
+              <div className="md" ref={mdRef}>
                 <ReactMarkdown
                   key={mdKey}
                   remarkPlugins={[remarkGfm]}
@@ -96,17 +232,42 @@ export default function ChatMessage({
 
             {showCard && (
               <div className="linkcard">
-                <a href={firstUrl!} target="_blank" rel="noreferrer noopener">
-                  {firstUrl}
-                </a>
+                <a href={firstUrl!}>{firstUrl}</a>
               </div>
             )}
 
             <div className="toolbar">
               <button className="tbtn" onClick={copyMarkdown} title="Copy">
-                {copied ? "Đã chép" : "Copy"}
+                {copied ? "Đã chép" : "Sao chép"}
               </button>
             </div>
+
+            {preview.show && preview.data && (
+              <Preview style={{ left: preview.x, top: preview.y }}>
+                <div className="row">
+                  {preview.data.icon && (
+                    <img className="ico" src={preview.data.icon} alt="" />
+                  )}
+                  <div className="meta">
+                    <div className="host">{preview.data.hostname}</div>
+                    {preview.loading && (
+                      <div className="loading">Đang lấy thông tin…</div>
+                    )}
+                    {preview.data.title && (
+                      <div className="title">{preview.data.title}</div>
+                    )}
+                    {preview.data.description && (
+                      <div className="desc">{preview.data.description}</div>
+                    )}
+                  </div>
+                </div>
+                {preview.data.image && (
+                  <div className="thumb">
+                    <img src={preview.data.image} alt="" />
+                  </div>
+                )}
+              </Preview>
+            )}
           </div>
         ) : (
           <span className="user-text">{raw}</span>
@@ -116,7 +277,7 @@ export default function ChatMessage({
   );
 }
 
-/* ================= helpers ================ */
+/* ===================== helpers ===================== */
 function extractSteps(raw: string): string[] | null {
   const m = raw.match(/<!--\s*steps\s*:\s*(\[[\s\S]*?\])\s*-->/i);
   if (!m) return null;
@@ -126,13 +287,10 @@ function extractSteps(raw: string): string[] | null {
     return null;
   }
 }
-
 function findFirstUrl(text: string): string | null {
   const m = text.match(/https?:\/\/[^\s)]+/);
   return m ? m[0].replace(/[)\]]+$/, "") : null;
 }
-
-/** Chỉ show card khi có đúng 1 URL “trần” và không có markdown link sẵn. */
 function shouldShowLinkCard(text: string, url: string): boolean {
   if (
     /\[[^\]]+\]\(https?:\/\/[^\s)]+\)/.test(text) ||
@@ -141,16 +299,44 @@ function shouldShowLinkCard(text: string, url: string): boolean {
     return false;
   const urls = text.match(/https?:\/\/[^\s)]+/g) || [];
   if (urls.length !== 1) return false;
-  const onlyUrlBlock = text.trim() === url || text.trim() === `${url}\n`;
-  return onlyUrlBlock;
+  return text.trim() === url || text.trim() === `${url}\n`;
+}
+function safeURL(href: string): URL | null {
+  try {
+    return new URL(href);
+  } catch {
+    return null;
+  }
 }
 
-/* ================= styles ================ */
+/* Lấy Open Graph qua Microlink */
+async function fetchOG(url: string): Promise<Partial<PreviewData> | null> {
+  try {
+    const r = await fetch(
+      `https://api.microlink.io?url=${encodeURIComponent(
+        url
+      )}&screenshot=false`,
+      { mode: "cors" }
+    );
+    const data = await r.json().catch(() => null);
+    if (!data || data.status !== "success") return null;
+    const d = data.data || {};
+    return {
+      title: d.title,
+      description: d.description,
+      icon: d.logo?.url || d.logo,
+      image: d.image?.url || d.image,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/* ===================== styles ===================== */
 const Item = styled.div`
   display: flex;
   margin: 16px 0;
   justify-content: flex-start;
-
   &.user {
     justify-content: flex-end;
   }
@@ -160,20 +346,15 @@ const Item = styled.div`
     max-width: min(740px, 92%);
     padding: 14px 16px;
     border-radius: ${({ theme }) => theme.radii.lg};
-    background: linear-gradient(
-          180deg,
-          rgba(255, 255, 255, 0.66),
-          rgba(255, 255, 255, 0.66)
-        )
-        padding-box,
-      linear-gradient(180deg, rgba(255, 255, 255, 0), rgba(0, 0, 0, 0.04))
-        border-box;
+    background: ${({ theme }) => theme.colors.surface};
     border: 1px solid ${({ theme }) => theme.colors.border};
     color: ${({ theme }) => theme.colors.primary};
     line-height: 1.65;
     box-shadow: ${({ theme }) => theme.shadow};
     transition: transform 0.12s ease, box-shadow 0.12s ease,
       border-color 0.12s ease;
+    word-break: break-word;
+    overflow-wrap: anywhere;
   }
 
   &.assistant .bubble {
@@ -183,9 +364,7 @@ const Item = styled.div`
         transparent 60%
       ),
       ${({ theme }) => theme.colors.surface};
-    border-color: ${({ theme }) => theme.colors.border};
   }
-
   &.user .bubble {
     background: linear-gradient(
           180deg,
@@ -202,26 +381,19 @@ const Item = styled.div`
     border-color: rgba(206, 122, 88, 0.45);
   }
 
-  .bubble:hover {
-    border-color: ${({ theme }) => theme.colors.accent};
-    box-shadow: 0 12px 28px rgba(206, 122, 88, 0.14);
-  }
-
   .assistant-inner .hint {
     font-size: 0.92rem;
     color: ${({ theme }) => theme.colors.secondary};
     margin-bottom: 8px;
     letter-spacing: 0.2px;
   }
-
   .steps {
     list-style: none;
     padding: 0;
-    margin: 8px 0 12px 0;
+    margin: 8px 0 12px;
     display: grid;
     gap: 8px;
   }
-
   .steps li {
     display: grid;
     grid-template-columns: 24px 1fr;
@@ -247,7 +419,6 @@ const Item = styled.div`
     flex: 1;
   }
 
-  /* Markdown polish */
   .md {
     font-size: 1rem;
   }
@@ -258,23 +429,20 @@ const Item = styled.div`
   .md ol {
     padding-left: 1.25rem;
   }
+  .md :is(p, li, td, th) {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
   .md a {
     color: ${({ theme }) => theme.colors.accent2};
     text-decoration: none;
     border-bottom: 1px dashed currentColor;
+    cursor: pointer;
+    position: relative;
+    z-index: 1;
   }
   .md a:hover {
     opacity: 0.9;
-  }
-  .md strong {
-    color: ${({ theme }) => theme.colors.primary};
-  }
-  .md blockquote {
-    border-left: 3px solid ${({ theme }) => theme.colors.border};
-    padding: 0.25rem 0.75rem;
-    background: ${({ theme }) => theme.colors.surface2};
-    border-radius: ${({ theme }) => theme.radii.sm};
-    color: ${({ theme }) => theme.colors.secondary};
   }
   .md code {
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
@@ -284,6 +452,12 @@ const Item = styled.div`
     border-radius: 8px;
     padding: 0.18rem 0.4rem;
     font-size: 0.92em;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+  .md pre {
+    max-width: 100%;
+    overflow: auto;
   }
   .md pre code {
     display: block;
@@ -313,10 +487,10 @@ const Item = styled.div`
     text-align: left;
   }
 
-  /* Khi đang stream: hiển thị đúng xuống dòng theo \n */
   .streaming {
     white-space: pre-wrap;
     word-break: break-word;
+    overflow-wrap: anywhere;
     margin: 0.45rem 0;
     background: transparent;
     border: 0;
@@ -334,11 +508,12 @@ const Item = styled.div`
     display: flex;
     align-items: center;
     gap: 10px;
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
   .linkcard a {
     color: ${({ theme }) => theme.colors.accent2};
     font-weight: 600;
-    word-break: break-all;
   }
 
   .toolbar {
@@ -366,5 +541,79 @@ const Item = styled.div`
 
   .user-text {
     white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+`;
+
+/* Tooltip preview */
+const Preview = styled.div`
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 9999;
+  pointer-events: none;
+
+  min-width: 280px;
+  max-width: 380px;
+  background: ${({ theme }) => theme.colors.surface};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  box-shadow: ${({ theme }) => theme.shadow};
+  border-radius: ${({ theme }) => theme.radii.md};
+  padding: 10px 12px;
+  animation: fadeIn 0.12s ease-out;
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(-2px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .row {
+    display: grid;
+    grid-template-columns: 20px 1fr;
+    gap: 10px;
+  }
+  .ico {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+  }
+  .meta {
+    min-width: 0;
+  }
+  .host {
+    font-size: 12px;
+    color: ${({ theme }) => theme.colors.secondary};
+    margin-bottom: 2px;
+  }
+  .loading {
+    font-size: 12px;
+    color: ${({ theme }) => theme.colors.secondary};
+  }
+  .title {
+    font-weight: 700;
+    color: ${({ theme }) => theme.colors.primary};
+    overflow-wrap: anywhere;
+  }
+  .desc {
+    font-size: 13px;
+    color: ${({ theme }) => theme.colors.secondary};
+    margin-top: 4px;
+    overflow-wrap: anywhere;
+  }
+
+  .thumb {
+    margin-top: 8px;
+    overflow: hidden;
+    border-radius: ${({ theme }) => theme.radii.sm};
+  }
+  .thumb img {
+    width: 100%;
+    display: block;
   }
 `;
