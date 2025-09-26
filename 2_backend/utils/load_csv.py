@@ -1,7 +1,7 @@
 import csv
 from supabase import create_client, Client
 from urllib.parse import urlparse, parse_qs
-from ..config import SUPABASE_URL, SUPABASE_KEY
+from ..config import SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 
 # Run this script once to load CSV into Supabase
 # Usage: python -m app.utils.load_csv path_to_csv.csv
@@ -52,11 +52,11 @@ if __name__ == "__main__":
 
     csv_path = sys.argv[1]
 
-    if not SUPABASE_URL or not SUPABASE_KEY:
-        print("Error: SUPABASE_URL and SUPABASE_KEY must be set and not None.")
+    if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY:
+        print("Error: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set and not None.")
         sys.exit(1)
 
-    client: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+    client: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
     with open(csv_path, "r", encoding="utf-8") as f:
         reader = csv.DictReader(f)

@@ -1,19 +1,13 @@
 from typing import List, Optional, Dict
 from supabase import create_client, Client
-from .config import SUPABASE_URL, SUPABASE_KEY, SUPABASE_SERVICE_ROLE_KEY, MODE
+from .config import SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 from .models import User, Session, Service
 from langchain_core.messages import message_to_dict, messages_from_dict, BaseMessage
 
 if SUPABASE_URL is None:
     raise TypeError("SUPABASE_URL is invalid")
 
-if MODE == "dev":
-    client: Client = create_client(
-        SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)  # type: ignore
-elif MODE == "prod":
-    client: Client = create_client(SUPABASE_URL, SUPABASE_KEY)  # type: ignore
-else:
-    raise ValueError("Invalid MODE. Choose 'dev' or 'prod'.")
+client: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)  # type: ignore
 
 
 def get_user(user_id: str) -> Optional[User]:
