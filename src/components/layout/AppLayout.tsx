@@ -20,11 +20,11 @@ export default function AppLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [needProfile, setNeedProfile] = useState(false);
 
-  /* ====== Guard đăng nhập ở Layout ====== */
+  /* ====== Guard ====== */
   useEffect(() => {
     let alive = true;
     me()
-      .then(() => { /* ok */ })
+      .then(() => {})
       .catch(() => {
         try { sessionStorage.removeItem("activeSessionId"); } catch {}
         if (alive) navigate("/signin", { replace: true });
@@ -32,7 +32,7 @@ export default function AppLayout() {
     return () => { alive = false; };
   }, [navigate]);
 
-  /* ====== FIX bfcache ====== */
+  /* ====== bfcache ====== */
   useEffect(() => {
     const onPageShow = (e: PageTransitionEvent) => {
       if ((e as any).persisted) {
@@ -48,9 +48,7 @@ export default function AppLayout() {
 
   /* ====== Sidebar state ====== */
   useEffect(() => {
-    try {
-      setCollapsed(localStorage.getItem("sbCollapsed") === "1");
-    } catch {}
+    try { setCollapsed(localStorage.getItem("sbCollapsed") === "1"); } catch {}
   }, []);
   const toggle = () =>
     setCollapsed((v) => {
@@ -113,7 +111,7 @@ export default function AppLayout() {
     lang === "vi" ? "Hoàn tất hồ sơ của bạn" : "Complete your profile";
   const bannerText =
     lang === "vi"
-      ? "Vui lòng điền Họ tên, Tuổi và Nơi sống để ChatGOV có thể cá nhân hoá câu trả lời."
+      ? "Vui lòng cập nhật hồ sơ để ChatGOV có thể cá nhân hoá câu trả lời."
       : "Please fill your Full name, Age and City/District so ChatGOV can personalize answers.";
   const bannerBtn = lang === "vi" ? "Đi tới Hồ sơ" : "Go to Profile";
 
@@ -127,7 +125,6 @@ export default function AppLayout() {
       </aside>
 
       <section className="main">
-        {/* Header: FULL overlay (desktop) / sticky + blur (mobile) */}
         <Topbar>
           <div className="chrome">
             <button className="menuBtn" onClick={toggle} aria-label="Menu">
@@ -204,26 +201,19 @@ const Shell = styled.div`
     padding-top: 0;
   }
 
-  /* Desktop: chừa header + banner khi có banner */
+  /* Desktop: chừa header + banner khi có banner (banner absolute) */
   &[data-banner="1"] .content {
     padding-top: calc(var(--topbar-h) + var(--banner-h));
   }
 
-  /* Mobile: header sticky tự chiếm chỗ => chỉ cộng banner */
-  @media (max-width: 980px) {
-    .content { padding-top: 0; }
-    &[data-banner="1"] .content { padding-top: var(--banner-h); }
-  }
-
   /* ===== MOBILE OVERLAY SIDEBAR ===== */
   @media (max-width: 980px) {
-    /* ÉP grid còn đúng 1 cột để không giữ cột “rail” rỗng */
+    /* grid 1 cột, không giữ cột rail rỗng */
     grid-template-columns: 1fr !important;
 
-    /* KHÔNG có backdrop mặc định */
-    &::after { content: none; }
+    .content { padding-top: 0; }              /* banner sticky tự chiếm chỗ */
+    &[data-banner="1"] .content { padding-top: 0; }
 
-    /* MẶC ĐỊNH: ẩn sidebar khỏi flow để không tạo khoảng rỗng / lệch */
     .rail {
       display: none;
       position: fixed;
@@ -236,12 +226,9 @@ const Shell = styled.div`
       transition: transform 0.28s ease, visibility 0s linear 0.28s;
       will-change: transform;
       box-shadow: 0 10px 30px rgba(0,0,0,0.25);
-
       visibility: hidden;
       pointer-events: none;
     }
-
-    /* KHI MỞ: bật lại hiển thị + overlay + cho phép tương tác */
     &[data-collapsed="false"] .rail {
       display: block;
       transform: translateX(0);
@@ -249,8 +236,6 @@ const Shell = styled.div`
       pointer-events: auto;
       transition: transform 0.28s ease, visibility 0s;
     }
-
-    /* Backdrop chỉ bật khi MỞ */
     &[data-collapsed="false"]::after {
       content: "";
       position: fixed;
@@ -293,7 +278,6 @@ const Topbar = styled.header`
     pointer-events: none;
   }
 
-  /* Nút menu chỉ hiện trên mobile */
   .menuBtn {
     display: none;
     border: none;
@@ -323,18 +307,20 @@ const Topbar = styled.header`
   }
 `;
 
-/* Banner “Hoàn tất hồ sơ” */
+/* ===== Responsive Banner ===== */
 const Banner = styled.div`
   --r: 14px;
   position: absolute;
   top: var(--topbar-h);
   left: 0;
   right: 0;
-  height: var(--banner-h);
+  height: var(--banner-h);                /* desktop: mỏng, cố định cao */
   z-index: 6;
-  display: flex;
+
+  display: grid;                           /* desktop: 2 cột: nội dung | nút */
+  grid-template-columns: 1fr auto;
   align-items: center;
-  justify-content: space-between;
+  gap: 12px;
   padding: 10px 12px 10px 14px;
 
   background: linear-gradient(90deg, rgba(206,122,88,0.95), rgba(143,56,42,0.95));
@@ -342,7 +328,7 @@ const Banner = styled.div`
   border-bottom: 1px solid rgba(255, 255, 255, 0.2);
 
   .msg { display: flex; gap: 10px; align-items: center; min-width: 0; }
-  .icon { width: 22px; height: 22px; display: grid; place-items: center; opacity: .9; }
+  .icon { width: 22px; height: 22px; display: grid; place-items: center; opacity: .9; flex: 0 0 auto; }
   .icon svg { width: 22px; height: 22px; fill: currentColor; }
   .text { min-width: 0; }
   .title { font-weight: 800; line-height: 1.1; }
@@ -356,8 +342,27 @@ const Banner = styled.div`
   .go:hover { filter: brightness(1.05); }
   .go:active { transform: translateY(1px); }
 
+  /* MOBILE: sticky + nội dung quấn dòng, nút xuống hàng (đọc đủ) */
   @media (max-width: 980px) {
     position: sticky;
     top: var(--topbar-h);
+    height: auto;                          /* auto cao theo nội dung */
+    grid-template-columns: 1fr;            /* 1 cột, nút xuống dưới */
+    align-items: start;
+    gap: 8px;
+    padding: 10px 12px;
+
+    .msg { align-items: flex-start; }
+    .desc {
+      white-space: normal;                 /* ⟵ cho phép wrap, không ... */
+      overflow: visible;
+      text-overflow: clip;
+    }
+    .go {
+      width: 100%;                         /* nút full width dễ bấm */
+      height: 40px;
+      border-radius: 12px;
+      justify-self: end;                   /* căn phải nếu chưa full width */
+    }
   }
 `;
