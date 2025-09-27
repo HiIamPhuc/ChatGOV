@@ -426,4 +426,22 @@ const Main = styled.div`
     scrollbar-width: thin;
     scrollbar-color: #d0d0d0 transparent;
   }
-`;
+
+  /* Small screens: tighter paddings & fit input */
+  @media (max-width: 640px) {
+    .home { padding: 16px; gap: 12px; }
+    .hero { text-align: center; }
+    .desc { font-size: 0.95rem; text-align: center; }
+
+    .content {
+      padding: 8px 10px 10px 10px;
+    }
+
+    .composer {
+      padding: 8px 10px;
+    }
+
+    .jump {
+      bottom: calc(var(--footer-h) + 12px);
+    }
+  }`;

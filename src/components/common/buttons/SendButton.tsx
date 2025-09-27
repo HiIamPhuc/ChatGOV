@@ -14,14 +14,14 @@ const SendButton: React.FC<Props> = ({
   size = 18,
   disabled,
 }) => {
+  const hasLabel = !!label?.trim();
   return (
-    <SendWrap>
+    <SendWrap data-has-label={hasLabel ? "1" : "0"}>
       <button
         onClick={onClick}
-        aria-label={label}
-        title={label}
+        aria-label={label || "Gửi"}
+        title={label || "Gửi"}
         disabled={disabled}
-        // truyền kích thước icon qua CSS var
         style={{ ["--icon" as any]: `${size}px` }}
       >
         <div className="plane">
@@ -31,6 +31,8 @@ const SendButton: React.FC<Props> = ({
               viewBox="0 0 24 24"
               width={size}
               height={size}
+              aria-hidden="true"
+              focusable="false"
             >
               <path fill="none" d="M0 0h24v24H0z" />
               <path
@@ -40,7 +42,7 @@ const SendButton: React.FC<Props> = ({
             </svg>
           </div>
         </div>
-        <span className="label">{label}</span>
+        {hasLabel && <span className="label">{label}</span>}
       </button>
     </SendWrap>
   );
@@ -50,7 +52,6 @@ export default SendButton;
 
 const SendWrap = styled.div`
   button {
-    /* layout */
     position: relative;
     display: inline-flex;
     align-items: center;
@@ -59,111 +60,99 @@ const SendWrap = styled.div`
     white-space: nowrap;
 
     /* sizing */
-    --icon: 18px; /* fallback nếu không truyền style */
+    --icon: 18px;
     --padX: 0.9em;
-    --gapL: 0.45em; /* khoảng cách text so với icon “ảo” */
+    --gapL: 0.45em;
     font-family: inherit;
     font-size: 0.95rem;
     color: #fff;
     padding: 0.55em var(--padX);
-    /* chừa khoảng bên trái cho icon dù icon đã absolute */
-    padding-left: calc(var(--padX) + var(--icon) + var(--gapL));
     border: none;
     border-radius: 12px;
     cursor: pointer;
 
-    /* motion */
-    transition: transform 0.15s ease, filter 0.15s ease, box-shadow 0.15s ease,
-      opacity 0.15s ease;
-
-    /* theme */
     background: linear-gradient(
       90deg,
       ${({ theme }) => theme.colors.accent},
       ${({ theme }) => theme.colors.accent2}
     );
     box-shadow: 0 6px 18px rgba(206, 122, 88, 0.24);
+
+    transition: transform .15s ease, filter .15s ease, box-shadow .15s ease, opacity .15s ease;
   }
 
-  button:hover {
-    filter: brightness(0.97);
+  /* chừa chỗ icon khi có label (desktop) */
+  &[data-has-label="1"] button {
+    padding-left: calc(var(--padX) + var(--icon) + var(--gapL));
   }
-  button:active {
-    transform: scale(0.98);
-  }
+
+  button:hover { filter: brightness(.97); }
+  button:active { transform: scale(.98); }
   button:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 3px rgba(206, 122, 88, 0.25),
-      0 6px 18px rgba(206, 122, 88, 0.24);
+    box-shadow: 0 0 0 3px rgba(206,122,88,.25), 0 6px 18px rgba(206,122,88,.24);
   }
 
-  /* ICON (máy bay) — đặt absolute để không đẩy chữ */
+  /* ICON */
   .plane {
     position: absolute;
-    left: var(--padX); /* vị trí ban đầu sát trái */
     top: 50%;
     transform: translateY(-50%);
     width: var(--icon);
     height: var(--icon);
     display: grid;
     place-items: center;
-    transition: left 0.35s ease, transform 0.35s ease, opacity 0.2s ease;
-    transform-origin: center center;
+    transform-origin: center;
+    transition: left .35s ease, transform .35s ease, opacity .2s ease;
   }
+  &[data-has-label="1"] .plane { left: var(--padX); }
+  &[data-has-label="0"] .plane { left: 50%; transform: translate(-50%, -50%); }
 
-  /* bob nhẹ khi hover */
-  .plane-bob {
-    transition: transform 0.35s ease;
-  }
-  @keyframes fly-1 {
-    from {
-      transform: translateY(0.08em);
-    }
-    to {
-      transform: translateY(-0.08em);
-    }
-  }
+  .plane-bob { transition: transform .35s ease; }
+  @keyframes fly-1 { from { transform: translateY(.08em); } to { transform: translateY(-.08em); } }
 
-  /* LABEL — trượt ra ngoài bên phải khi hover, không đổi width button */
   .label {
     display: inline-block;
-    transition: transform 0.35s ease, opacity 0.35s ease;
+    transition: transform .35s ease, opacity .35s ease;
     will-change: transform;
   }
 
-  /* HOVER STATE: máy bay vào giữa + xoay ngang, chữ chạy ra ngoài */
-  button:hover .plane {
-    left: 50%;
-    transform: translate(-50%, -50%) rotate(45deg) scale(1.08);
-  }
-  button:hover .plane-bob {
-    animation: fly-1 0.6s ease-in-out infinite alternate;
-  }
-  button:hover .label {
-    transform: translateX(120%);
-    opacity: 0;
+  /* Hover effects (chỉ thiết bị có hover) */
+  @media (hover: hover) and (pointer: fine) {
+    &[data-has-label="1"] button:hover .plane {
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(45deg) scale(1.08);
+    }
+    button:hover .plane-bob { animation: fly-1 .6s ease-in-out infinite alternate; }
+    &[data-has-label="1"] button:hover .label { transform: translateX(120%); opacity: 0; }
   }
 
   /* DISABLED */
-  button[disabled] {
-    opacity: 0.6;
-    cursor: not-allowed;
-    filter: grayscale(0.1);
-  }
+  button[disabled] { opacity: .6; cursor: not-allowed; filter: grayscale(.1); }
 
-  /* MOBILE: ẩn chữ để tiết kiệm chỗ */
+  /* ===== MOBILE COMPACT ===== */
   @media (max-width: 600px) {
-    .label {
-      display: none;
+    /* ẩn label, dùng nút tròn chỉ-icon */
+    &[data-has-label] .label { display: none; }
+
+    &[data-has-label] button {
+      width:  var(--iconBtn, 38px);   /* lấy từ parent; fallback 38px */
+      height: var(--iconBtn, 38px);
+      min-width: var(--iconBtn, 38px);
+      padding: 0;
+      border-radius: 999px;
+      font-size: 0; /* tránh text ẩn ảnh hưởng layout */
     }
+    &[data-has-label] .plane {
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+    /* to icon hơn 1 chút */
+    &[data-has-label] button { --icon: 20px; }
   }
 
-  /* giảm motion nếu user chọn reduced motion */
   @media (prefers-reduced-motion: reduce) {
-    .plane,
-    .label {
-      transition: none;
-      animation: none;
-    }
+    .plane, .label { transition: none; animation: none; }
+    button { transition: none; }
   }
 `;

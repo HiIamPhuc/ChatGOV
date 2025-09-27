@@ -21,22 +21,18 @@ const PromptInput: React.FC<Props> = ({ onSend, maxWidth = 820, compact }) => {
     const ta = taRef.current;
     if (!ta) return;
 
-    // autosize
     ta.style.height = "0px";
     const next = Math.min(ta.scrollHeight, MAX_HEIGHT);
     ta.style.height = next + "px";
     ta.style.overflowY = ta.scrollHeight > MAX_HEIGHT ? "auto" : "hidden";
 
-    // Đo số dòng thực tế => > 1 dòng thì chuyển layout
     const cs = window.getComputedStyle(ta);
     const lh = parseFloat(cs.lineHeight || "0") || 20;
     const lines = Math.round(ta.scrollHeight / lh);
     setStack(lines > 1);
   };
 
-  useEffect(() => {
-    autosize();
-  }, []);
+  useEffect(() => { autosize(); }, []);
 
   const submit = () => {
     const text = prompt.trim();
@@ -56,15 +52,9 @@ const PromptInput: React.FC<Props> = ({ onSend, maxWidth = 820, compact }) => {
             className="msgInput"
             placeholder={t("enterPrompt")}
             value={prompt}
-            onChange={(e) => {
-              setPrompt(e.target.value);
-              autosize();
-            }}
+            onChange={(e) => { setPrompt(e.target.value); autosize(); }}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                submit();
-              }
+              if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(); }
             }}
           />
           <div className="send">
@@ -88,13 +78,11 @@ const Outer = styled.div`
     padding: 8px 10px;
   }
 
-  /* Dùng GRID để chuyển layout linh hoạt */
   .box {
-    display: grid;
-    grid-template-columns: 1fr auto; /* mặc định: cùng hàng */
+    --rowH: 42px;
+    display: flex;
     align-items: center;
-    column-gap: 10px;
-    row-gap: 8px;
+    gap: 10px;
 
     border: 1px solid ${({ theme }) => theme.colors.border};
     background: ${({ theme }) => theme.colors.surface};
@@ -103,12 +91,22 @@ const Outer = styled.div`
     box-shadow: ${({ theme }) => theme.shadow};
   }
 
-  /* Khi input > 1 dòng: textarea lên hàng trên, nút gửi vẫn ở chỗ cũ */
   .box.stack {
-    grid-template-columns: 1fr;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
   }
-  .box .send {
-    justify-self: end; /* luôn ở góc phải */
+  .box.stack .send { justify-content: flex-end; height: auto; }
+  .box.stack .msgInput { min-height: 0; line-height: 1.4; }
+
+  /* Truyền kích thước cho nút mobile */
+  .send {
+    --iconBtn: var(--rowH);       /* SendButton đọc biến này */
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    height: var(--rowH);
   }
 
   .msgInput {
@@ -121,23 +119,24 @@ const Outer = styled.div`
     outline: none;
     color: ${({ theme }) => theme.colors.primary};
     font-size: 0.98rem;
-    line-height: 1.4; /* giúp tính số dòng ổn định */
+    margin: 0;
+    padding: 0;
   }
-  .msgInput::placeholder {
-    color: ${({ theme }) => theme.colors.secondary};
+  .box:not(.stack) .msgInput {
+    min-height: var(--rowH);
+    line-height: var(--rowH);
   }
-  .msgInput:focus {
-    outline: none;
-  }
+  .msgInput::placeholder { color: ${({ theme }) => theme.colors.secondary}; }
 
-  /* scrollbar của textarea */
-  .msgInput::-webkit-scrollbar {
-    width: 10px;
-  }
+  .msgInput::-webkit-scrollbar { width: 10px; }
   .msgInput::-webkit-scrollbar-thumb {
     background: ${({ theme }) => theme.colors.border};
     border-radius: 10px;
     border: 2px solid transparent;
     background-clip: content-box;
+  }
+
+  @media (max-width: 600px) {
+    .box { --rowH: 38px; }
   }
 `;
