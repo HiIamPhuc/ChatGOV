@@ -20,10 +20,8 @@ function normalizeRole(raw?: string | null): "user" | "assistant" {
   return "assistant";
 }
 
-export async function listSessions(userId: string): Promise<ChatSession[]> {
-  const { data } = await api.get("/api/chat/sessions", {
-    params: { user_id: userId },
-  });
+export async function listSessions(): Promise<ChatSession[]> {
+  const { data } = await api.get("/api/chat/sessions");
   return data;
 }
 
@@ -62,21 +60,12 @@ export async function autoNameSession(
   return data;
 }
 
-export async function deleteSession(
-  sessionId: string,
-  userId: string
-): Promise<void> {
-  await api.delete(`/api/chat/sessions/${encodeURIComponent(sessionId)}`, {
-    params: { user_id: userId },
-  });
+export async function deleteSession(sessionId: string): Promise<void> {
+  await api.delete(`/api/chat/sessions/${encodeURIComponent(sessionId)}`);
 }
 
-export async function startSession(
-  userId: string
-): Promise<{ session_id: string }> {
-  const { data } = await api.post("/api/chat/start_session", {
-    user_id: userId,
-  });
+export async function startSession(): Promise<{ session_id: string }> {
+  const { data } = await api.post("/api/chat/start_session", {});
   return data;
 }
 

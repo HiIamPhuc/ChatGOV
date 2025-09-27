@@ -211,7 +211,7 @@ export default function ChatPage() {
           setTyping(false);
           return;
         }
-        const s = await startSession(userId);
+        const s = await startSession();
         sid = s.session_id;
         setSessionId(sid);
         // set active cho sidebar + replace state để highlight

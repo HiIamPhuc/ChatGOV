@@ -75,7 +75,7 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
 
   useEffect(() => {
     if (!userId) return;
-    listSessions(userId)
+    listSessions()
       .then(setSessions)
       .catch((e) => {
         console.error(e);
@@ -167,7 +167,7 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
     if (!deleteTarget || !userId) return;
     try {
       setBusy(true);
-      await apiDelete(deleteTarget, userId);
+      await apiDelete(deleteTarget);
       setSessions((prev) => prev.filter((s) => s.session_id !== deleteTarget));
       if (activeId === deleteTarget) {
         sessionStorage.removeItem("activeSessionId");
