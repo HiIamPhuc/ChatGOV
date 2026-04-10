@@ -4,7 +4,6 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 
-/* ===================== types ===================== */
 export type Msg = {
   id: string;
   role: "user" | "assistant" | "ai";
@@ -16,11 +15,10 @@ type PreviewData = {
   hostname: string;
   title?: string;
   description?: string;
-  icon?: string; // favicon
-  image?: string; // screenshot
+  icon?: string;
+  image?: string;
 };
 
-/* ===================== component ===================== */
 export default function ChatMessage({
   msg,
   done = true,
@@ -31,7 +29,6 @@ export default function ChatMessage({
   const isAssistant = /^(assistant|ai)$/i.test(String(msg.role || ""));
   const raw = String(msg.content ?? "");
 
-  // ---- Hooks theo đúng thứ tự ----
   const steps = useMemo(() => extractSteps(raw), [raw]);
   const contentNoSteps = useMemo(
     () => raw.replace(/<!--\s*steps\s*:\s*\[[\s\S]*?\]\s*-->/i, ""),
@@ -46,7 +43,6 @@ export default function ChatMessage({
     [isAssistant, normalized, steps]
   );
 
-  // Link card
   const firstUrl = useMemo(() => findFirstUrl(normalized), [normalized]);
   const showCard = useMemo(
     () => done && !!firstUrl && shouldShowLinkCard(normalized, firstUrl!),
@@ -63,7 +59,6 @@ export default function ChatMessage({
     } catch {}
   };
 
-  // ===== Link Preview hover =====
   const mdRef = useRef<HTMLDivElement | null>(null);
   const [preview, setPreview] = useState<{
     show: boolean;
@@ -86,13 +81,14 @@ export default function ChatMessage({
 
     const showFor = (a: HTMLAnchorElement) => {
       const rect = a.getBoundingClientRect();
-      const pad = 8,
-        vw = window.innerWidth,
-        vh = window.innerHeight;
-      const estW = 360,
-        estH = 210;
-      let x = rect.left,
-        y = rect.bottom + 8;
+      const pad = 8;
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const estW = 360;
+      const estH = 210;
+      let x = rect.left;
+      let y = rect.bottom + 8;
+
       if (x + estW + pad > vw) x = Math.max(pad, vw - estW - pad);
       if (y + estH + pad > vh) y = rect.top - estH - 8;
       if (y < pad) y = Math.min(vh - estH - pad, rect.bottom + 8);
@@ -137,28 +133,22 @@ export default function ChatMessage({
       setPreview((p) => (p.show ? { ...p, show: false } : p));
     };
 
-    // Gắn trực tiếp vào từng <a>: hover vào hiện, rời là ẩn
-    const enterHandlers: Array<
-      [
-        (e: Event) => void,
-        (e: Event) => void,
-        (e: Event) => void,
-        (e: Event) => void
-      ]
+    const listeners: Array<
+      [(e: Event) => void, (e: Event) => void, (e: Event) => void, (e: Event) => void]
     > = [];
+
     anchors.forEach((a) => {
-      const hEnter = () => showFor(a);
-      const hLeave = () => hide();
-      const hFocus = () => showFor(a);
-      const hBlur = () => hide();
-      a.addEventListener("mouseenter", hEnter);
-      a.addEventListener("mouseleave", hLeave);
-      a.addEventListener("focus", hFocus);
-      a.addEventListener("blur", hBlur);
-      enterHandlers.push([hEnter, hLeave, hFocus, hBlur]);
+      const onEnter = () => showFor(a);
+      const onLeave = () => hide();
+      const onFocus = () => showFor(a);
+      const onBlur = () => hide();
+      a.addEventListener("mouseenter", onEnter);
+      a.addEventListener("mouseleave", onLeave);
+      a.addEventListener("focus", onFocus);
+      a.addEventListener("blur", onBlur);
+      listeners.push([onEnter, onLeave, onFocus, onBlur]);
     });
 
-    // Ẩn khi cuộn / bấm ra ngoài / nhấn Esc / tab mất focus
     const onScroll = hide;
     const onWheel = hide;
     const onPointerDown = (e: PointerEvent) => {
@@ -168,43 +158,45 @@ export default function ChatMessage({
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") hide();
     };
-    const onBlur = hide;
+    const onBlurWindow = hide;
 
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("wheel", onWheel, { passive: true });
     window.addEventListener("pointerdown", onPointerDown, { passive: true });
     window.addEventListener("keydown", onKeyDown);
-    window.addEventListener("blur", onBlur);
+    window.addEventListener("blur", onBlurWindow);
 
     return () => {
       anchors.forEach((a, i) => {
-        const [hEnter, hLeave, hFocus, hBlur] = enterHandlers[i]!;
-        a.removeEventListener("mouseenter", hEnter);
-        a.removeEventListener("mouseleave", hLeave);
-        a.removeEventListener("focus", hFocus);
-        a.removeEventListener("blur", hBlur);
+        const [onEnter, onLeave, onFocus, onBlur] = listeners[i]!;
+        a.removeEventListener("mouseenter", onEnter);
+        a.removeEventListener("mouseleave", onLeave);
+        a.removeEventListener("focus", onFocus);
+        a.removeEventListener("blur", onBlur);
       });
       window.removeEventListener("scroll", onScroll as any);
       window.removeEventListener("wheel", onWheel as any);
       window.removeEventListener("pointerdown", onPointerDown as any);
       window.removeEventListener("keydown", onKeyDown as any);
-      window.removeEventListener("blur", onBlur as any);
+      window.removeEventListener("blur", onBlurWindow as any);
       if (fetchTimer) window.clearTimeout(fetchTimer);
       setPreview({ show: false, x: 0, y: 0, loading: false, data: null });
     };
   }, [mdKey]);
 
-  // Không override <a> → để toàn bộ hành vi click trái/phải/middle là NATIVE
   if (hiddenAssistant) return null;
 
   return (
     <Item className={isAssistant ? "assistant" : "user"}>
-      <div className="bubble">
-        {isAssistant ? (
-          <div className="assistant-inner">
+      {isAssistant ? (
+        <div className="assistantShell">
+          <div className="assistantAvatar" aria-hidden="true">
+            AI
+          </div>
+          <div className="assistantBody">
             {!!steps && (
               <>
-                <div className="hint">Hướng dẫn từng bước</div>
+                <div className="hint">Da suy nghi trong giay lat</div>
                 <ol className="steps">
                   {steps.map((s, i) => (
                     <li key={i}>
@@ -238,46 +230,47 @@ export default function ChatMessage({
 
             <div className="toolbar">
               <button className="tbtn" onClick={copyMarkdown} title="Copy">
-                {copied ? "Đã chép" : "Sao chép"}
+                {copied ? "Da chep" : "Sao chep"}
               </button>
             </div>
-
-            {preview.show && preview.data && (
-              <Preview style={{ left: preview.x, top: preview.y }}>
-                <div className="row">
-                  {preview.data.icon && (
-                    <img className="ico" src={preview.data.icon} alt="" />
-                  )}
-                  <div className="meta">
-                    <div className="host">{preview.data.hostname}</div>
-                    {preview.loading && (
-                      <div className="loading">Đang lấy thông tin…</div>
-                    )}
-                    {preview.data.title && (
-                      <div className="title">{preview.data.title}</div>
-                    )}
-                    {preview.data.description && (
-                      <div className="desc">{preview.data.description}</div>
-                    )}
-                  </div>
-                </div>
-                {preview.data.image && (
-                  <div className="thumb">
-                    <img src={preview.data.image} alt="" />
-                  </div>
-                )}
-              </Preview>
-            )}
           </div>
-        ) : (
-          <span className="user-text">{raw}</span>
-        )}
-      </div>
+
+          {preview.show && preview.data && (
+            <Preview style={{ left: preview.x, top: preview.y }}>
+              <div className="row">
+                {preview.data.icon && (
+                  <img className="ico" src={preview.data.icon} alt="" />
+                )}
+                <div className="meta">
+                  <div className="host">{preview.data.hostname}</div>
+                  {preview.loading && (
+                    <div className="loading">Dang lay thong tin...</div>
+                  )}
+                  {preview.data.title && (
+                    <div className="title">{preview.data.title}</div>
+                  )}
+                  {preview.data.description && (
+                    <div className="desc">{preview.data.description}</div>
+                  )}
+                </div>
+              </div>
+              {preview.data.image && (
+                <div className="thumb">
+                  <img src={preview.data.image} alt="" />
+                </div>
+              )}
+            </Preview>
+          )}
+        </div>
+      ) : (
+        <div className="userBubble">
+          <span className="userText">{raw}</span>
+        </div>
+      )}
     </Item>
   );
 }
 
-/* ===================== helpers ===================== */
 function extractSteps(raw: string): string[] | null {
   const m = raw.match(/<!--\s*steps\s*:\s*(\[[\s\S]*?\])\s*-->/i);
   if (!m) return null;
@@ -287,20 +280,24 @@ function extractSteps(raw: string): string[] | null {
     return null;
   }
 }
+
 function findFirstUrl(text: string): string | null {
   const m = text.match(/https?:\/\/[^\s)]+/);
   return m ? m[0].replace(/[)\]]+$/, "") : null;
 }
+
 function shouldShowLinkCard(text: string, url: string): boolean {
   if (
     /\[[^\]]+\]\(https?:\/\/[^\s)]+\)/.test(text) ||
     /<https?:\/\/[^>]+>/.test(text)
-  )
+  ) {
     return false;
+  }
   const urls = text.match(/https?:\/\/[^\s)]+/g) || [];
   if (urls.length !== 1) return false;
   return text.trim() === url || text.trim() === `${url}\n`;
 }
+
 function safeURL(href: string): URL | null {
   try {
     return new URL(href);
@@ -309,13 +306,10 @@ function safeURL(href: string): URL | null {
   }
 }
 
-/* Lấy Open Graph qua Microlink */
 async function fetchOG(url: string): Promise<Partial<PreviewData> | null> {
   try {
     const r = await fetch(
-      `https://api.microlink.io?url=${encodeURIComponent(
-        url
-      )}&screenshot=false`,
+      `https://api.microlink.io?url=${encodeURIComponent(url)}&screenshot=false`,
       { mode: "cors" }
     );
     const data = await r.json().catch(() => null);
@@ -332,185 +326,227 @@ async function fetchOG(url: string): Promise<Partial<PreviewData> | null> {
   }
 }
 
-/* ===================== styles ===================== */
 const Item = styled.div`
   display: flex;
-  margin: 16px 0;
+  margin: 26px 0;
   justify-content: flex-start;
+
   &.user {
     justify-content: flex-end;
   }
 
-  .bubble {
-    position: relative;
-    max-width: min(740px, 92%);
-    padding: 14px 16px;
-    border-radius: ${({ theme }) => theme.radii.lg};
-    background: ${({ theme }) => theme.colors.surface};
-    border: 1px solid ${({ theme }) => theme.colors.border};
-    color: ${({ theme }) => theme.colors.primary};
-    line-height: 1.65;
-    box-shadow: ${({ theme }) => theme.shadow};
-    transition: transform 0.12s ease, box-shadow 0.12s ease,
-      border-color 0.12s ease;
-    word-break: break-word;
-    overflow-wrap: anywhere;
+  .assistantShell {
+    width: min(860px, 100%);
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr);
+    gap: 14px;
+    align-items: start;
   }
 
-  &.assistant .bubble {
-    background: radial-gradient(
-        1200px 300px at -10% -20%,
-        rgba(206, 122, 88, 0.08),
-        transparent 60%
-      ),
-      ${({ theme }) => theme.colors.surface};
-  }
-  &.user .bubble {
+  .assistantAvatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: #fff;
     background: linear-gradient(
-          180deg,
-          rgba(255, 248, 244, 0.85),
-          rgba(255, 248, 244, 0.85)
-        )
-        padding-box,
-      linear-gradient(
-          180deg,
-          rgba(206, 122, 88, 0.35),
-          rgba(206, 122, 88, 0.15)
-        )
-        border-box;
-    border-color: rgba(206, 122, 88, 0.45);
+      180deg,
+      ${({ theme }) => theme.colors.accent},
+      ${({ theme }) => theme.colors.accent2}
+    );
+    box-shadow: 0 8px 22px rgba(144, 57, 56, 0.22);
   }
 
-  .assistant-inner .hint {
-    font-size: 0.92rem;
-    color: ${({ theme }) => theme.colors.secondary};
-    margin-bottom: 8px;
-    letter-spacing: 0.2px;
+  .assistantBody {
+    min-width: 0;
+    color: ${({ theme }) => theme.colors.primary};
+    line-height: 1.7;
   }
+
+  .hint {
+    font-size: 0.98rem;
+    color: ${({ theme }) => theme.colors.secondary};
+    margin-bottom: 14px;
+  }
+
   .steps {
     list-style: none;
     padding: 0;
-    margin: 8px 0 12px;
+    margin: 0 0 16px;
     display: grid;
-    gap: 8px;
+    gap: 10px;
   }
+
   .steps li {
     display: grid;
-    grid-template-columns: 24px 1fr;
-    gap: 10px;
-    align-items: flex-start;
-    padding: 8px 10px;
-    background: ${({ theme }) => theme.colors.surface2};
-    border: 1px dashed ${({ theme }) => theme.colors.border};
-    border-radius: ${({ theme }) => theme.radii.md};
+    grid-template-columns: 28px 1fr;
+    gap: 12px;
+    align-items: start;
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid ${({ theme }) => theme.colors.border};
+    border-radius: 14px;
   }
+
   .steps .idx {
-    display: inline-grid;
-    place-items: center;
-    width: 24px;
-    height: 24px;
+    width: 28px;
+    height: 28px;
     border-radius: 999px;
-    background: ${({ theme }) => theme.colors.accent2};
-    color: #fff;
-    font-size: 0.85rem;
+    display: grid;
+    place-items: center;
+    background: ${({ theme }) => theme.colors.surface2};
+    color: ${({ theme }) => theme.colors.accent2};
+    font-size: 0.86rem;
     font-weight: 700;
-  }
-  .steps .tx {
-    flex: 1;
   }
 
   .md {
-    font-size: 1rem;
+    min-width: 0;
+    font-size: 1.04rem;
   }
+
   .md :is(p, ul, ol, blockquote, pre, table) {
-    margin: 0.55rem 0;
+    margin: 0.85rem 0;
   }
+
+  .md > :first-child {
+    margin-top: 0;
+  }
+
+  .md > :last-child {
+    margin-bottom: 0;
+  }
+
   .md ul,
   .md ol {
-    padding-left: 1.25rem;
+    padding-left: 1.35rem;
   }
+
   .md :is(p, li, td, th) {
     overflow-wrap: anywhere;
     word-break: break-word;
   }
+
+  .md h1,
+  .md h2,
+  .md h3 {
+    line-height: 1.25;
+    margin: 1.1rem 0 0.55rem;
+    color: ${({ theme }) => theme.colors.primary};
+  }
+
+  .md strong {
+    font-weight: 800;
+  }
+
   .md a {
     color: ${({ theme }) => theme.colors.accent2};
     text-decoration: none;
-    border-bottom: 1px dashed currentColor;
-    cursor: pointer;
-    position: relative;
-    z-index: 1;
+    font-weight: 600;
+    border-bottom: 1px solid rgba(144, 57, 56, 0.28);
   }
+
   .md a:hover {
-    opacity: 0.9;
+    border-bottom-color: currentColor;
   }
+
   .md code {
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
       "Liberation Mono", "Courier New", monospace;
     background: ${({ theme }) => theme.colors.surface2};
     border: 1px solid ${({ theme }) => theme.colors.border};
     border-radius: 8px;
-    padding: 0.18rem 0.4rem;
-    font-size: 0.92em;
-    overflow-wrap: anywhere;
-    word-break: break-word;
+    padding: 0.16rem 0.38rem;
+    font-size: 0.9em;
   }
+
   .md pre {
     max-width: 100%;
     overflow: auto;
+    padding: 0.9rem 1rem;
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid ${({ theme }) => theme.colors.border};
+    border-radius: 16px;
   }
+
   .md pre code {
     display: block;
-    padding: 0.9rem;
-    border-radius: ${({ theme }) => theme.radii.md};
+    padding: 0;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
   }
-  .md h1,
-  .md h2,
-  .md h3 {
-    line-height: 1.25;
-    margin: 0.9rem 0 0.5rem;
-    color: ${({ theme }) => theme.colors.accent2};
-  }
+
   .md table {
     width: 100%;
+    min-width: 640px;
     border-collapse: collapse;
-    overflow: hidden;
-    border-radius: ${({ theme }) => theme.radii.md};
+    border-spacing: 0;
   }
+
+  .md table thead tr {
+    border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+  }
+
+  .md table tbody tr {
+    border-bottom: 1px solid rgba(239, 216, 205, 0.82);
+  }
+
   .md th,
   .md td {
-    border: 1px solid ${({ theme }) => theme.colors.border};
-    padding: 0.45rem 0.6rem;
-  }
-  .md th {
-    background: ${({ theme }) => theme.colors.surface2};
+    padding: 14px 14px 14px 0;
     text-align: left;
+    vertical-align: top;
+    border: 0;
+  }
+
+  .md th {
+    font-size: 0.96rem;
+    font-weight: 800;
+    color: ${({ theme }) => theme.colors.primary};
+  }
+
+  .md td {
+    color: ${({ theme }) => theme.colors.primary};
+  }
+
+  .md p + table,
+  .md table + p {
+    margin-top: 1rem;
+  }
+
+  .md blockquote {
+    margin-left: 0;
+    padding-left: 14px;
+    border-left: 3px solid ${({ theme }) => theme.colors.border};
+    color: ${({ theme }) => theme.colors.secondary};
   }
 
   .streaming {
     white-space: pre-wrap;
     word-break: break-word;
     overflow-wrap: anywhere;
-    margin: 0.45rem 0;
+    margin: 0;
     background: transparent;
     border: 0;
     padding: 0;
     font: inherit;
-    color: ${({ theme }) => theme.colors.secondary};
+    color: ${({ theme }) => theme.colors.primary};
   }
 
   .linkcard {
+    margin-top: 14px;
     padding: 12px 14px;
     border: 1px solid ${({ theme }) => theme.colors.border};
-    background: ${({ theme }) => theme.colors.surface};
-    border-radius: ${({ theme }) => theme.radii.md};
-    margin: 10px 0 4px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
+    background: rgba(255, 255, 255, 0.78);
+    border-radius: 16px;
     overflow-wrap: anywhere;
     word-break: break-word;
   }
+
   .linkcard a {
     color: ${({ theme }) => theme.colors.accent2};
     font-weight: 600;
@@ -518,42 +554,83 @@ const Item = styled.div`
 
   .toolbar {
     display: flex;
-    justify-content: flex-end;
-    margin-top: 8px;
+    justify-content: flex-start;
+    margin-top: 14px;
     gap: 6px;
   }
+
   .tbtn {
-    height: 26px;
-    padding: 0 10px;
+    height: 28px;
+    padding: 0 11px;
     border-radius: 999px;
     border: 1px solid ${({ theme }) => theme.colors.border};
-    background: ${({ theme }) => theme.colors.surface2};
+    background: ${({ theme }) => theme.colors.surface};
     color: ${({ theme }) => theme.colors.secondary};
     font-size: 12px;
     cursor: pointer;
     transition: all 0.12s ease;
   }
+
   .tbtn:hover {
     color: ${({ theme }) => theme.colors.accent};
     border-color: ${({ theme }) => theme.colors.accent};
-    background: rgba(206, 122, 88, 0.1);
+    background: rgba(206, 122, 88, 0.08);
   }
 
-  .user-text {
+  .userBubble {
+    max-width: min(760px, 78%);
+    padding: 14px 20px;
+    border-radius: 999px;
+    background: rgba(34, 34, 34, 0.08);
+    color: ${({ theme }) => theme.colors.primary};
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(6px);
+  }
+
+  .userText {
     white-space: pre-wrap;
     overflow-wrap: anywhere;
     word-break: break-word;
+    font-size: 1rem;
+    line-height: 1.45;
+  }
+
+  @media (max-width: 720px) {
+    margin: 18px 0;
+
+    .assistantShell {
+      grid-template-columns: 28px minmax(0, 1fr);
+      gap: 10px;
+    }
+
+    .assistantAvatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      font-size: 0.64rem;
+    }
+
+    .md {
+      font-size: 0.98rem;
+    }
+
+    .md table {
+      min-width: 520px;
+    }
+
+    .userBubble {
+      max-width: 92%;
+      border-radius: 24px;
+    }
   }
 `;
 
-/* Tooltip preview */
 const Preview = styled.div`
   position: fixed;
   left: 0;
   top: 0;
   z-index: 9999;
   pointer-events: none;
-
   min-width: 280px;
   max-width: 380px;
   background: ${({ theme }) => theme.colors.surface};
@@ -562,6 +639,7 @@ const Preview = styled.div`
   border-radius: ${({ theme }) => theme.radii.md};
   padding: 10px 12px;
   animation: fadeIn 0.12s ease-out;
+
   @keyframes fadeIn {
     from {
       opacity: 0;
@@ -578,28 +656,34 @@ const Preview = styled.div`
     grid-template-columns: 20px 1fr;
     gap: 10px;
   }
+
   .ico {
     width: 20px;
     height: 20px;
     border-radius: 4px;
   }
+
   .meta {
     min-width: 0;
   }
+
   .host {
     font-size: 12px;
     color: ${({ theme }) => theme.colors.secondary};
     margin-bottom: 2px;
   }
+
   .loading {
     font-size: 12px;
     color: ${({ theme }) => theme.colors.secondary};
   }
+
   .title {
     font-weight: 700;
     color: ${({ theme }) => theme.colors.primary};
     overflow-wrap: anywhere;
   }
+
   .desc {
     font-size: 13px;
     color: ${({ theme }) => theme.colors.secondary};
@@ -612,6 +696,7 @@ const Preview = styled.div`
     overflow: hidden;
     border-radius: ${({ theme }) => theme.radii.sm};
   }
+
   .thumb img {
     width: 100%;
     display: block;

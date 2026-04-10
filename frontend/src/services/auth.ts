@@ -1,4 +1,5 @@
 import { api } from "@/utils/http";
+import { delay, isBypassAuthEnabled, mockUser } from "@/dev/bypass";
 
 export type Me = {
   id: string;
@@ -12,6 +13,11 @@ export async function register(
   fullName?: string,
   metadata?: any
 ) {
+  if (isBypassAuthEnabled) {
+    await delay();
+    return { ...mockUser, email, user_metadata: { full_name: fullName, ...metadata } };
+  }
+
   const { data } = await api.post("/api/auth/register", {
     email,
     password,
@@ -22,18 +28,32 @@ export async function register(
 }
 
 export async function login(email: string, password: string): Promise<Me> {
+  if (isBypassAuthEnabled) {
+    await delay();
+    return { ...mockUser, email: email || mockUser.email };
+  }
+
   const { data } = await api.post("/api/auth/login", { email, password });
   return data;
 }
 
 export async function me(): Promise<Me> {
+  if (isBypassAuthEnabled) {
+    await delay();
+    return mockUser;
+  }
+
   const { data } = await api.get("/api/auth/me");
   return data;
 }
 
 export async function logout() {
-  await api.post("/api/auth/logout");
-  // dọn state client để tránh UI cũ hiện lại khi back
+  if (!isBypassAuthEnabled) {
+    await api.post("/api/auth/logout");
+  } else {
+    await delay();
+  }
+
   try {
     sessionStorage.clear();
     localStorage.removeItem("me");
@@ -41,6 +61,11 @@ export async function logout() {
 }
 
 export async function forgotPassword(email: string) {
+  if (isBypassAuthEnabled) {
+    await delay();
+    return;
+  }
+
   await api.post("/api/auth/forgot-password", { email });
 }
 
@@ -48,6 +73,11 @@ export async function resetPasswordWithRecoveryToken(
   recoveryAccessToken: string,
   newPassword: string
 ) {
+  if (isBypassAuthEnabled) {
+    await delay();
+    return;
+  }
+
   await api.post(
     "/api/auth/reset-password",
     { new_password: newPassword },
@@ -59,6 +89,11 @@ export async function exchangeSession(
   accessToken: string,
   refreshToken?: string
 ): Promise<Me> {
+  if (isBypassAuthEnabled) {
+    await delay();
+    return mockUser;
+  }
+
   const { data } = await api.post("/api/auth/session/exchange", {
     access_token: accessToken,
     refresh_token: refreshToken,

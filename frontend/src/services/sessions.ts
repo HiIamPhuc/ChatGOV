@@ -1,4 +1,16 @@
 import { api } from "@/utils/http";
+import {
+  appendMockMessages,
+  autoNameMockSession,
+  buildMockAssistantReply,
+  createMockSession,
+  delay,
+  deleteMockSession,
+  getMockHistory,
+  isBypassAuthEnabled,
+  listMockSessions,
+  renameMockSession,
+} from "@/dev/bypass";
 
 export type ChatSession = {
   session_id: string;
@@ -10,10 +22,8 @@ export type ChatSession = {
   messages_count: number;
 };
 
-// UI chỉ làm việc với "user" | "assistant"
 export type ChatMessage = { role: "user" | "assistant"; content: string };
 
-// BE có thể trả "human"/"assistant"/"system"/... => chuẩn hoá về "user"/"assistant"
 function normalizeRole(raw?: string | null): "user" | "assistant" {
   const r = (raw || "").toLowerCase();
   if (r === "user" || r === "human") return "user";
@@ -21,6 +31,11 @@ function normalizeRole(raw?: string | null): "user" | "assistant" {
 }
 
 export async function listSessions(): Promise<ChatSession[]> {
+  if (isBypassAuthEnabled) {
+    await delay();
+    return listMockSessions();
+  }
+
   const { data } = await api.get("/api/chat/sessions");
   return data;
 }
@@ -28,14 +43,16 @@ export async function listSessions(): Promise<ChatSession[]> {
 export async function getHistory(
   sessionId: string
 ): Promise<{ session_id: string; messages: ChatMessage[] }> {
+  if (isBypassAuthEnabled) {
+    await delay();
+    return { session_id: sessionId, messages: getMockHistory(sessionId) };
+  }
+
   const { data } = await api.get("/api/chat/history", {
     params: { session_id: sessionId },
   });
 
-  // Chỉ giữ các message hiển thị được (user/human và assistant/ai không có tool_calls)
   const filtered = filterDisplayableMessages(data?.messages || []);
-
-  // Chuẩn hoá role + extract text an toàn từ nhiều cấu trúc content
   const norm: ChatMessage[] = filtered.map((m: any) => ({
     role: normalizeRole(m?.role),
     content: toPlainText(m?.content),
@@ -48,6 +65,12 @@ export async function renameSession(
   sessionId: string,
   title: string
 ): Promise<void> {
+  if (isBypassAuthEnabled) {
+    await delay();
+    renameMockSession(sessionId, title);
+    return;
+  }
+
   await api.put(`/api/chat/sessions/${encodeURIComponent(sessionId)}/title`, {
     title,
   });
@@ -56,35 +79,48 @@ export async function renameSession(
 export async function autoNameSession(
   sessionId: string
 ): Promise<{ ok: boolean; session_id: string; title: string }> {
-  const { data } = await api.post(`/api/chat/sessions/${encodeURIComponent(sessionId)}/autoname`);
+  if (isBypassAuthEnabled) {
+    await delay();
+    return autoNameMockSession(sessionId);
+  }
+
+  const { data } = await api.post(
+    `/api/chat/sessions/${encodeURIComponent(sessionId)}/autoname`
+  );
   return data;
 }
 
 export async function deleteSession(sessionId: string): Promise<void> {
+  if (isBypassAuthEnabled) {
+    await delay();
+    deleteMockSession(sessionId);
+    return;
+  }
+
   await api.delete(`/api/chat/sessions/${encodeURIComponent(sessionId)}`);
 }
 
 export async function startSession(): Promise<{ session_id: string }> {
+  if (isBypassAuthEnabled) {
+    await delay();
+    return createMockSession();
+  }
+
   const { data } = await api.post("/api/chat/start_session", {});
   return data;
 }
 
-/* helpers: lọc message hiển thị & chuẩn hoá content */
-/** Lấy text hiển thị từ nhiều kiểu content khác nhau (string / array parts / object). */
 function toPlainText(val: any): string {
   if (typeof val === "string") return val;
 
   if (Array.isArray(val)) {
-    // Ví dụ OpenAI "content" là mảng part: [{type:"text", text:"..."}, ...]
     return val.map((p) => toPlainText(p?.text ?? p?.content ?? p)).join("");
   }
 
   if (val && typeof val === "object") {
-    // Một số provider trả { text: "..." } hoặc { content: "..." }
     if (typeof (val as any).text === "string") return (val as any).text;
     if ((val as any).content != null) return toPlainText((val as any).content);
     try {
-      // Fallback để không crash nếu backend trả object bất kỳ
       return JSON.stringify(val);
     } catch {
       return String(val);
@@ -94,13 +130,6 @@ function toPlainText(val: any): string {
   return String(val ?? "");
 }
 
-/**
- * Chỉ giữ message hiển thị cho UI:
- * - user/human => luôn hiển thị
- * - assistant/ai => chỉ hiển thị khi tool_calls trống (undefined/null/[])
- * - ẩn system/tool và assistant có tool_calls
- * - chặn message rỗng
- */
 function filterDisplayableMessages(raw: any[]): any[] {
   return (raw || []).filter((m) => {
     const role = String(m?.role || "").toLowerCase();
@@ -121,38 +150,42 @@ function filterDisplayableMessages(raw: any[]): any[] {
   });
 }
 
-/* Networking helpers */
-
 function resolveApiUrl(path: string): string {
-  // Lấy baseURL từ axios instance để dùng đúng proxy / host của backend
   const base = (api.defaults?.baseURL as string) || "/api";
-  // base có thể là '/api' hoặc 'http://localhost:8000'
   if (/^https?:\/\//i.test(base)) {
-    // dạng tuyệt đối -> dùng URL để ghép
     const u = new URL(
       path.replace(/^\//, ""),
-      base.endsWith("/") ? base : base + "/"
+      base.endsWith("/") ? base : `${base}/`
     );
     return u.toString();
-  } else {
-    // dạng tương đối -> ghép với window.location.origin (vite proxy xử lý)
-    const prefix = base.endsWith("/") ? base.slice(0, -1) : base;
-    return `${window.location.origin}${prefix}${
-      path.startsWith("/") ? path : `/${path}`
-    }`;
   }
+
+  const prefix = base.endsWith("/") ? base.slice(0, -1) : base;
+  return `${window.location.origin}${prefix}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
-/**
- * Streaming POST tới /api/chat/ (SSE).
- * Parse SSE chuẩn: mỗi "event" cách nhau bằng \n\n.
- * Với mỗi event, gộp các dòng "data:" lại thành 1 payload; ưu tiên JSON {delta}.
- */
 export function streamChat(
   sessionId: string,
   message: string,
   onToken: (token: string) => void
 ): Promise<void> {
+  if (isBypassAuthEnabled) {
+    return new Promise(async (resolve) => {
+      const reply = buildMockAssistantReply(message);
+      appendMockMessages(sessionId, [
+        { role: "user", content: message },
+        { role: "assistant", content: reply },
+      ]);
+
+      for (const token of reply.split(" ")) {
+        onToken(`${token} `);
+        await delay(40);
+      }
+
+      resolve();
+    });
+  }
+
   return new Promise(async (resolve, reject) => {
     try {
       const url = resolveApiUrl("/api/chat/");
@@ -175,7 +208,6 @@ export function streamChat(
       const decoder = new TextDecoder();
       let buffer = "";
 
-      // Parse SSE: tách event theo \n\n. Mỗi event có thể có nhiều dòng "data:".
       while (true) {
         const { value, done } = await reader.read();
         if (done) break;
@@ -186,7 +218,6 @@ export function streamChat(
           const rawEvent = buffer.slice(0, sepIndex);
           buffer = buffer.slice(sepIndex + 2);
 
-          // Gom tất cả các dòng "data:" trong cùng 1 event
           const parts: string[] = [];
           for (const line of rawEvent.split("\n")) {
             const trimmed = line.trim();
@@ -196,7 +227,6 @@ export function streamChat(
           const payload = parts.join("\n");
 
           if (!payload) continue;
-
           if (payload === "[DONE]") {
             resolve();
             return;
@@ -206,7 +236,6 @@ export function streamChat(
             return;
           }
 
-          // Ưu tiên JSON { delta }, fallback text
           let token = "";
           try {
             const obj = JSON.parse(payload);
@@ -218,7 +247,6 @@ export function streamChat(
         }
       }
 
-      // Trường hợp server đóng stream mà không gửi [DONE]
       resolve();
     } catch (err) {
       reject(err as any);
